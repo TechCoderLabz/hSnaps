@@ -1,12 +1,17 @@
 /**
- * Feed post card: avatar, username, date, rendered body, and chain actions via hive-react-kit.
- * Uses Aioha operations for upvote/comment/reblog/tip.
+ * Feed post card: avatar, username, date, rendered body, and custom chain action row.
+ * Uses Aioha operations for upvote/reblog/tip and hive-react-kit for upvote list modal.
  */
 import { useAioha } from '@aioha/react-provider'
 import { KeyTypes } from '@aioha/aioha'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PostActionButton } from 'hive-react-kit'
+import { UpvoteListModal } from 'hive-react-kit'
+import { Heart, MessageCircle, Repeat2, Share2, Gift } from 'lucide-react'
 import { MarkdownPreview } from './MarkdownPreview'
+import { VoteSlider } from './comments/VoteSlider'
+import { getDiscussion } from '../services/hiveService'
 import type { NormalizedPost } from '../utils/types'
 import { useAuthData } from '../stores/authStore'
 
@@ -38,16 +43,28 @@ function convertPercentageToWeight(percentage: number): number {
   return Math.round(clamped * 100)
 }
 
-function generateRandomPermlink(length = 8): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('')
-}
-
 export function PostCard({ post, readOnly = false }: PostCardProps) {
   const { aioha } = useAioha()
   const { isAuthenticated, username } = useAuthData()
-  const hiveValue = (post.payout || post.total_payout || 0).toFixed(3)
-    .toString() + ' HIVE'
+  const navigate = useNavigate()
+  const [showUpvoteSlider, setShowUpvoteSlider] = useState(false)
+  const [showUpvoteList, setShowUpvoteList] = useState(false)
+  const [upvotePercent, setUpvotePercent] = useState(50)
+  const [hasLocalUpvote, setHasLocalUpvote] = useState(false)
+  const [displayNetVotes, setDisplayNetVotes] = useState(post.net_votes)
+  const [checkingVoteStatus, setCheckingVoteStatus] = useState(false)
+
+  useEffect(() => {
+    setDisplayNetVotes(post.net_votes)
+  }, [post.net_votes])
+
+  const hasUserUpvoted = useMemo(() => {
+    if (hasLocalUpvote) return true
+    if (!username || !post.active_votes) return false
+    const user = username.toLowerCase()
+    // If user appears in active_votes, treat it as already voted.
+    return post.active_votes.some((v) => v.voter.toLowerCase() === user)
+  }, [hasLocalUpvote, username, post.active_votes])
 
   const ensureCanAct = () => {
     if (readOnly && !isAuthenticated) {
@@ -63,24 +80,75 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
 
   const handleUpvote = async (author: string, permlink: string, percent: number) => {
     if (!ensureCanAct()) return
+    if (hasUserUpvoted) {
+      toast.info('you have already voted this post')
+      return
+    }
     const result = await aioha.vote(author, permlink, convertPercentageToWeight(percent))
     if (!result?.success) throw new Error(result?.error ?? 'Upvote failed')
     toast.success('Upvoted')
+    setHasLocalUpvote(true)
+    setDisplayNetVotes((prev) => prev + 1)
+    setTimeout(() => {
+      void refreshVoteCount()
+    }, 5000)
   }
 
-  const handleComment = async (parentAuthor: string, parentPermlink: string, body: string) => {
-    if (!ensureCanAct()) return
-    const permlink = generateRandomPermlink()
-    const result = await aioha.comment(
-      parentAuthor,
-      parentPermlink,
-      permlink,
-      `Re: ${parentAuthor}'s post`,
-      body,
-      JSON.stringify({ app: 'hsnaps/1.0.0', format: 'markdown' })
-    )
-    if (!result?.success) throw new Error(result?.error ?? 'Comment failed')
-    toast.success('Comment posted')
+  const refreshVoteCount = async () => {
+    try {
+      const discussion = await getDiscussion(post.author, post.permlink)
+      const root = Object.values(discussion).find(
+        (item) => item.author === post.author && item.permlink === post.permlink
+      )
+      if (!root) return
+      const nextVotes =
+        typeof root.stats?.total_votes === 'number'
+          ? root.stats.total_votes
+          : Array.isArray(root.active_votes)
+            ? root.active_votes.length
+            : displayNetVotes
+      setDisplayNetVotes(nextVotes)
+    } catch {
+      // Keep current count if refresh fails.
+    }
+  }
+
+  const checkAlreadyVotedOnChain = async (): Promise<boolean> => {
+    if (!username) return false
+    try {
+      const discussion = await getDiscussion(post.author, post.permlink)
+      const root = Object.values(discussion).find(
+        (item) => item.author === post.author && item.permlink === post.permlink
+      )
+      if (!root?.active_votes) return false
+      const user = username.toLowerCase()
+      return root.active_votes.some((vote) => {
+        const voter = String(vote.voter ?? '').toLowerCase()
+        // In some responses rshares can be 0 even when percent is non-zero.
+        // If voter exists in active_votes, we should block revote.
+        return voter === user
+      })
+    } catch {
+      return false
+    }
+  }
+
+  const openVoteSlider = async (): Promise<boolean> => {
+    if (!ensureCanAct()) return false
+    if (hasUserUpvoted) {
+      toast.info('you have already voted this post')
+      return false
+    }
+    setCheckingVoteStatus(true)
+    const alreadyVoted = await checkAlreadyVotedOnChain()
+    setCheckingVoteStatus(false)
+    if (alreadyVoted) {
+      setHasLocalUpvote(true)
+      toast.info('you have already voted this post')
+      return false
+    }
+    setShowUpvoteSlider(true)
+    return true
   }
 
   const handleReblog = async () => {
@@ -131,12 +199,8 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     toast.success('Tip sent')
   }
 
-  const handleReport = () => {
-    if (readOnly && !isAuthenticated) {
-      toast.info('Please Login')
-      return
-    }
-    toast.info('Report flow will be added next')
+  const handleCommentRoute = () => {
+    navigate(`/dashboard/post/${post.author}/${post.permlink}`, { state: { post } })
   }
 
   return (
@@ -162,28 +226,98 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           <div className="mt-2 overflow-hidden">
             <MarkdownPreview content={post.body} className="!p-0 !border-0 !bg-transparent" />
           </div>
-          <div className="mt-3">
-            <PostActionButton
-              author={post.author}
-              permlink={post.permlink}
-              currentUser={username || null}
-              hiveValue={hiveValue}
-              onUpvote={(percent) => handleUpvote(post.author, post.permlink, percent)}
-              onSubmitComment={(parentAuthor, parentPermlink, body) =>
-                handleComment(parentAuthor, parentPermlink, body)
-              }
-              onComments={() => {}}
-              onReblog={handleReblog}
-              onShare={handleShare}
-              onTip={handleTip}
-              onReport={handleReport}
-              onClickCommentUpvote={(author, permlink, percent) =>
-                handleUpvote(author, permlink, percent)
-              }
-            />
+          <div className="mt-3 space-y-3">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-[#c5ccd4]">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => void openVoteSlider()}
+                  disabled={checkingVoteStatus}
+                  className="inline-flex items-center rounded-md px-1.5 py-1 transition hover:bg-[#313840]"
+                  aria-label="Upvote"
+                >
+                  <Heart
+                    className={`h-4 w-4 ${
+                      hasUserUpvoted ? 'fill-[#e31337] text-[#e31337]' : 'text-[#e31337]'
+                    }`}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowUpvoteList(true)}
+                  className="rounded-md px-1.5 py-1 text-[#ff8fa3] transition hover:bg-[#313840]"
+                  aria-label="Open upvote list"
+                >
+                  {displayNetVotes}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCommentRoute}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
+                aria-label="Open comments"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {post.children}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleReblog()}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
+                aria-label="Reblog"
+              >
+                <Repeat2 className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
+                aria-label="Share"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleTip()}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
+                aria-label="Tip"
+              >
+                <Gift className="h-4 w-4" />
+              </button>
+            </div>
+
           </div>
         </div>
       </div>
+      {showUpvoteList && (
+        <UpvoteListModal
+          author={post.author}
+          permlink={post.permlink}
+          currentUser={username || undefined}
+          onClose={() => setShowUpvoteList(false)}
+          onClickUpvoteButton={async () => {
+            const opened = await openVoteSlider()
+            if (opened) setShowUpvoteList(false)
+          }}
+        />
+      )}
+      {showUpvoteSlider && (
+        <VoteSlider
+          author={post.author}
+          defaultValue={upvotePercent}
+          onUpvote={async (percent) => {
+            setUpvotePercent(percent)
+            await handleUpvote(post.author, post.permlink, percent)
+            setShowUpvoteSlider(false)
+          }}
+          onCancel={() => setShowUpvoteSlider(false)}
+        />
+      )}
     </article>
   )
 }

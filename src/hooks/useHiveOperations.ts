@@ -21,7 +21,7 @@ export function useHiveOperations() {
   const { aioha } = useAioha();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { username, token, currentUser } = useAuthData();
+  const { username, currentUser } = useAuthData();
   const { loginWithPrivateKey } = useProgrammaticAuth(aioha!);
 
   const serverCallback = useCallback(async () => {
@@ -91,7 +91,8 @@ export function useHiveOperations() {
       parentAuthor: string,
       parentPermlink: string,
       body: string,
-      title?: string
+      title?: string,
+      jsonMetadata?: string
     ) => {
       if (!username) throw new Error("User not authenticated");
       if (!aioha) throw new Error("Wallet not available");
@@ -102,14 +103,14 @@ export function useHiveOperations() {
           await ensureProgrammaticAuth();
         }
         const permlink = generateRandomPermlink(8);
-        const commentTitle = title || `Re: ${parentAuthor}'s post`;
+        const commentTitle = title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim());
         const result = await aioha.comment(
           parentAuthor,
           parentPermlink,
           permlink,
           commentTitle,
           body,
-          JSON.stringify({ tags: ["hivepolls"], app: "hivepolls/1.0.0", format: "markdown" })
+          jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" })
         );
         if (!result.success) {
           throw new Error("Comment failed");

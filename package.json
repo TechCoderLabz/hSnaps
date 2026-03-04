@@ -16,7 +16,7 @@
     "@hiveio/dhive": "^1.3.4",
     "@tailwindcss/vite": "^4.2.1",
     "hive-authentication": "^0.6.2",
-    "hive-react-kit": "^0.2.5",
+    "hive-react-kit": "^0.2.6",
     "lucide-react": "^0.576.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

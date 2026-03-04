@@ -10,6 +10,7 @@ import { ThreadsFeed } from '../features/threads/ThreadsFeed'
 import { WavesFeed } from '../features/waves/WavesFeed'
 import { DbuzzFeed } from '../features/dbuzz/DbuzzFeed'
 import { MomentFeed } from '../features/moment/MomentFeed'
+import { PostCommentsPage } from '../pages/PostCommentsPage'
 
 export function AppRoutes() {
   const routes = useRoutes([
@@ -25,6 +26,7 @@ export function AppRoutes() {
         { path: 'waves', element: <WavesFeed /> },
         { path: 'dbuzz', element: <DbuzzFeed /> },
         { path: 'moment', element: <MomentFeed /> },
+        { path: 'post/:author/:permlink', element: <PostCommentsPage /> },
       ],
     },
     { path: '*', element: <Navigate to="/" replace /> },

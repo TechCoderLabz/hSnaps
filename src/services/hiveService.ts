@@ -60,11 +60,13 @@ export async function getAccountPosts(
   account: string,
   limit: number,
   startAuthor: string | null = null,
-  startPermlink: string | null = null
+  startPermlink: string | null = null,
+  observer: string = ''
 ): Promise<BridgePost[]> {
   const result = await callHiveRpc<BridgePost[]>('bridge.get_account_posts', {
     sort: 'posts',
     account,
+    observer,
     limit,
     start_author: startAuthor,
     start_permlink: startPermlink,
@@ -173,7 +175,23 @@ export const CONTAINER_ACCOUNTS: Record<FeedType, string> = {
   moment: 'liketu.moments',
 }
 
-const DBUZZ_TAG = 'hive-193084'
+export const DBUZZ_TAG = 'hive-193084'
+
+/**
+ * Returns the parent author + permlink to post into for a given feed type.
+ * For container-based feeds (snaps/threads/waves/moment): fetches the latest
+ * container post from the feed account. For DBuzz: returns the community tag.
+ */
+export async function getLatestContainer(feedType: FeedType): Promise<{ author: string; permlink: string }> {
+  if (feedType === 'dbuzz') {
+    return { author: '', permlink: DBUZZ_TAG }
+  }
+  const account = CONTAINER_ACCOUNTS[feedType]
+  const containers = await getAccountPosts(account, 1)
+  if (!containers.length) throw new Error(`No container found for ${feedType}`)
+  const c = containers[0]
+  return { author: c.author, permlink: c.permlink }
+}
 
 export interface FeedPageCursor {
   author: string
@@ -207,7 +225,7 @@ export async function fetchFeedPage(
   }
 
   const account = CONTAINER_ACCOUNTS[feedType]
-  const containers = await getAccountPosts(account, limit, null, null)
+  const containers = await getAccountPosts(account, limit, null, null, observer)
   const containerIndex = page - 1
   if (containerIndex >= containers.length) {
     return { posts: [], hasMore: false }

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FeedType } from '../utils/types'
+import { getLatestContainer } from '../services/hiveService'
 import { FeedComposer } from './FeedComposer'
 
 interface ComposeFabProps {
@@ -15,6 +16,19 @@ export function ComposeFab({
   authorMention,
 }: ComposeFabProps) {
   const [open, setOpen] = useState(false)
+  const [containerRef, setContainerRef] = useState<{ author: string; permlink: string } | null>(null)
+  const [refLoading, setRefLoading] = useState(false)
+  const [refError, setRefError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    setRefLoading(true)
+    setRefError(null)
+    getLatestContainer(feedType)
+      .then(setContainerRef)
+      .catch((e) => setRefError(e instanceof Error ? e.message : 'Failed to load container'))
+      .finally(() => setRefLoading(false))
+  }, [open, feedType])
 
   return (
     <>
@@ -48,15 +62,32 @@ export function ComposeFab({
                 ×
               </button>
             </div>
-            <FeedComposer
-              feedType={feedType}
-              placeholder={placeholder}
-              authorMention={authorMention}
-            />
+
+            {refLoading && (
+              <div className="rounded-2xl border border-[#3a424a] bg-[#262b30] px-4 py-6 text-center text-sm text-[#9ca3b0]">
+                Loading…
+              </div>
+            )}
+
+            {refError && (
+              <div className="rounded-2xl border border-red-500/30 bg-[#262b30] px-4 py-4 text-sm text-red-400">
+                {refError}
+              </div>
+            )}
+
+            {!refLoading && !refError && containerRef && (
+              <FeedComposer
+                feedType={feedType}
+                parentAuthor={containerRef.author}
+                parentPermlink={containerRef.permlink}
+                placeholder={placeholder}
+                authorMention={authorMention}
+                onSuccess={() => setOpen(false)}
+              />
+            )}
           </div>
         </div>
       )}
     </>
   )
 }
-

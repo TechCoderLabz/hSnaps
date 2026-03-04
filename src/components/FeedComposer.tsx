@@ -4,8 +4,10 @@
  * Renders nothing when user is not logged in.
  */
 import React, { useRef, useState, useCallback } from 'react'
+import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
 import { useMarkdownRenderer } from '../hooks/useMarkdownRenderer'
+import { useHiveOperations } from '../hooks/useHiveOperations'
 import GiphyPicker from './GiphyPicker'
 import ImageUploader from './ImageUploader'
 import type { FeedType } from '../utils/types'
@@ -13,9 +15,19 @@ import { FEED_CHAR_LIMITS } from '../utils/types'
 
 interface FeedComposerProps {
   feedType: FeedType
-  onSubmit?: (payload: { title: string; body: string }) => void
+  parentAuthor: string
+  parentPermlink: string
+  onSuccess?: () => void
   placeholder?: string
   authorMention?: string
+}
+
+const FEED_METADATA: Record<FeedType, { tags: string[]; app: string }> = {
+  snaps:   { tags: ['snaps'],                  app: 'peakd/2026.2.6'     },
+  threads: { tags: ['leofinance'],             app: 'leothreads/1.0.0'   },
+  waves:   { tags: ['ecency'],                 app: 'ecency/3.0.0'       },
+  dbuzz:   { tags: ['hive-193084', 'dbuzz'],   app: 'dbuzz/1.0.0'        },
+  moment:  { tags: ['liketu'],                 app: 'liketu/1.0.0'       },
 }
 
 const EMOJIS = [
@@ -29,12 +41,15 @@ const EMOJIS = [
 
 export function FeedComposer({
   feedType,
-  onSubmit,
+  parentAuthor,
+  parentPermlink,
+  onSuccess,
   placeholder = 'Write in Markdown...',
   authorMention,
 }: FeedComposerProps) {
   const { isAuthenticated } = useAuthData()
   const renderHive = useMarkdownRenderer()
+  const { comment } = useHiveOperations()
   if (!isAuthenticated) return null
 
   const limit = FEED_CHAR_LIMITS[feedType]
@@ -120,8 +135,14 @@ export function FeedComposer({
     if (body.length > limit || isSubmitting) return
     setIsSubmitting(true)
     try {
-      await onSubmit?.({ title: '', body: body.trim() })
+      const meta = FEED_METADATA[feedType]
+      const jsonMetadata = JSON.stringify({ tags: meta.tags, app: meta.app, format: 'markdown' })
+      await comment(parentAuthor, parentPermlink, body.trim(), '', jsonMetadata)
+      toast.success('Posted successfully!')
       setBody('')
+      onSuccess?.()
+    } catch {
+      // error toast already shown by useHiveOperations
     } finally {
       setIsSubmitting(false)
     }
