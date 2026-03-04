@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import "hive-react-kit/build.css";
+@import "hive-authentication/build.css";
+
+/* Hive theme tokens */
+:root {
+  --hive-red: #e31337;
+  --hive-black: #212529;
+  --hive-light-grey: #f0f0f8;
+  --hive-grey: #e7e7f1;
+  --hive-red-soft: rgba(227, 19, 55, 0.14);
+}
+
+body {
+  background: var(--hive-black);
+  color: var(--hive-light-grey);
+}
+
+.hive-surface {
+  background: #262b30;
+  border: 1px solid #363c43;
+}
+
+.hive-surface-soft {
+  background: #2b3138;
+  border: 1px solid #3a424a;
+}
+
+/* Prose overrides for markdown preview */
+.prose-invert a {
+  color: #ff5b78;
+}
+.prose-invert pre {
+  background: #2b3138;
+  border-radius: 0.5rem;
+}
+.markdown-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  width: auto;
+  height: auto;
+  margin: 0.5rem auto;
+  border-radius: 0.75rem;
+  object-fit: contain;
+}
