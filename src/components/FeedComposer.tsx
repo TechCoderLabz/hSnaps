@@ -27,7 +27,7 @@ const FEED_METADATA: Record<FeedType, { tags: string[]; app: string }> = {
   threads: { tags: ['leofinance'],             app: 'leothreads/1.0.0'   },
   waves:   { tags: ['ecency'],                 app: 'ecency/3.0.0'       },
   dbuzz:   { tags: ['hive-193084', 'dbuzz'],   app: 'dbuzz/1.0.0'        },
-  moment:  { tags: ['liketu'],                 app: 'liketu/1.0.0'       },
+  moments:  { tags: ['liketu'],                 app: 'liketu/1.0.0'       },
 }
 
 const EMOJIS = [

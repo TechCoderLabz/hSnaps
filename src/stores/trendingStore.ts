@@ -1,6 +1,3 @@
-/**
- * Trending data for the current feed: Top Tags, Top Authors, Top Communities (PeakD API).
- */
 import { create } from 'zustand'
 import {
   getTrendingTags,

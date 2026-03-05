@@ -95,8 +95,9 @@ export function CommentTile({
       }, 3000)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to upvote'
-      // eslint-disable-next-line no-alert
-      alert(message)
+      showToast(message)
+    } finally {
+      setIsRefreshing(false)
     }
   }
 

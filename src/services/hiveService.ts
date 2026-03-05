@@ -1,6 +1,6 @@
 /**
  * Hive API service: bridge JSON-RPC (api.hive.blog) and PeakD public APIs.
- * - bridge.get_account_posts → container list (Snaps, Threads, Waves, Moment)
+ * - bridge.get_account_posts → container list (Snaps, Threads, Waves, Moments)
  * - bridge.get_discussion → replies inside a container (actual feed items)
  * - bridge.get_ranked_posts → DBuzz feed (tag hive-193084)
  */
@@ -35,6 +35,40 @@ interface BridgePost {
   active_votes?: Array<{ voter?: string; rshares?: number }>
   stats?: { total_votes?: number; flag_weight?: number; gray?: boolean; hide?: boolean }
   net_rshares?: number
+}
+
+/** Fallback RPC nodes for condenser_api (api.hive.blog sometimes blocks CORS) */
+const CONDENSER_RPC_NODES = [
+  'https://api.hive.blog/',
+  'https://api.deathwing.me/',
+  'https://rpc.ausbit.dev/',
+]
+
+/** JSON-RPC call to Hive (condenser_api — params is an array, tries multiple nodes) */
+async function callCondenserApi<T>(method: string, params: unknown[]): Promise<T> {
+  const id = Math.floor(Math.random() * 1e9)
+  const body = JSON.stringify({ id, jsonrpc: '2.0', method: `condenser_api.${method}`, params })
+  let lastError: Error | null = null
+  for (const rpc of CONDENSER_RPC_NODES) {
+    try {
+      const res = await fetch(rpc, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json, text/plain, */*',
+          'content-type': 'application/json',
+          origin: 'https://peakd.com',
+        },
+        body,
+      })
+      if (!res.ok) throw new Error(`Hive RPC error: ${res.status}`)
+      const data = (await res.json()) as { result?: T; error?: { message: string } }
+      if (data.error) throw new Error(data.error.message ?? 'Hive RPC error')
+      return data.result as T
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e))
+    }
+  }
+  throw lastError ?? new Error('All Hive RPC nodes failed')
 }
 
 /** JSON-RPC call to Hive (bridge) */
@@ -172,14 +206,14 @@ export const CONTAINER_ACCOUNTS: Record<FeedType, string> = {
   threads: 'leothreads',
   waves: 'ecency.waves',
   dbuzz: 'dbuzz',
-  moment: 'liketu.moments',
+  moments: 'liketu.moments',
 }
 
 export const DBUZZ_TAG = 'hive-193084'
 
 /**
  * Returns the parent author + permlink to post into for a given feed type.
- * For container-based feeds (snaps/threads/waves/moment): fetches the latest
+ * For container-based feeds (snaps/threads/waves/moments): fetches the latest
  * container post from the feed account. For DBuzz: returns the community tag.
  */
 export async function getLatestContainer(feedType: FeedType): Promise<{ author: string; permlink: string }> {
@@ -200,9 +234,15 @@ export interface FeedPageCursor {
 
 /**
  * Fetch one page of feed posts.
- * - Snaps/Threads/Waves/Moment: get_account_posts → containers, then get_discussion for container at index (page-1) → replies as posts.
+ * - Snaps/Threads/Waves/Moments: get_account_posts → containers, then get_discussion for container at index (page-1) → replies as posts.
  * - DBuzz: get_ranked_posts with tag, paginated by start_author/start_permlink (pass dbuzzStart for page > 1).
  */
+/** condenser_api.get_reblogged_by — returns list of accounts who reblogged a post */
+export async function getRebloggedBy(author: string, permlink: string): Promise<string[]> {
+  const result = await callCondenserApi<string[]>('get_reblogged_by', [author, permlink])
+  return Array.isArray(result) ? result : []
+}
+
 export async function fetchFeedPage(
   feedType: FeedType,
   page: number,

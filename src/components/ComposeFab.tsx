@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react'
 import type { FeedType } from '../utils/types'
 import { getLatestContainer } from '../services/hiveService'
+import { useSnapsStore } from '../stores/snapsStore'
+import { useThreadsStore } from '../stores/threadsStore'
+import { useWavesStore } from '../stores/wavesStore'
+import { useDbuzzStore } from '../stores/dbuzzStore'
+import { useMomentStore } from '../stores/momentStore'
 import { FeedComposer } from './FeedComposer'
+
+const FEED_STORES: Record<FeedType, () => { fetchFeed: () => Promise<void> }> = {
+  snaps: useSnapsStore,
+  threads: useThreadsStore,
+  waves: useWavesStore,
+  dbuzz: useDbuzzStore,
+  moments: useMomentStore,
+}
 
 interface ComposeFabProps {
   feedType: FeedType
@@ -15,6 +28,7 @@ export function ComposeFab({
   placeholder,
   authorMention,
 }: ComposeFabProps) {
+  const { fetchFeed } = FEED_STORES[feedType]()
   const [open, setOpen] = useState(false)
   const [containerRef, setContainerRef] = useState<{ author: string; permlink: string } | null>(null)
   const [refLoading, setRefLoading] = useState(false)
@@ -36,55 +50,101 @@ export function ComposeFab({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#e31337] text-white shadow-lg shadow-black/50 hover:bg-[#c51231] focus:outline-none focus:ring-2 focus:ring-[#e31337]/70 md:bottom-6 md:right-8"
+        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#e31337] text-white shadow-xl shadow-black/40 transition-all duration-200 hover:scale-110 hover:bg-[#c51231] hover:shadow-2xl hover:shadow-black/50 focus:outline-none focus:ring-2 focus:ring-[#e31337]/70 focus:ring-offset-2 focus:ring-offset-[#212529] active:scale-95 md:bottom-6 md:right-8"
         aria-label="Create new post"
       >
-        <span className="text-2xl leading-none">＋</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          className="h-6 w-6"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
       </button>
 
-      {/* Popup with FeedComposer */}
+      {/* Modal overlay */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-2xl">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-sm font-semibold text-[#f0f0f8]">Create new post</h2>
+
+          {/* Modal panel */}
+          <div className="relative z-10 w-full max-w-2xl animate-[slideUp_200ms_ease-out] sm:animate-[scaleIn_200ms_ease-out]">
+            {/* Header */}
+            <div className="flex items-center justify-between rounded-t-2xl border border-b-0 border-[#3a424a] bg-[#262b30] px-4 py-3 sm:rounded-t-2xl">
+              <h2 className="text-base font-semibold text-[#f0f0f8]">Create new post</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-full p-1.5 text-[#c8cad6] hover:bg-[#2f353d]"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8] focus:outline-none focus:ring-2 focus:ring-[#e31337]/40"
                 aria-label="Close composer"
               >
-                ×
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
-            {refLoading && (
-              <div className="rounded-2xl border border-[#3a424a] bg-[#262b30] px-4 py-6 text-center text-sm text-[#9ca3b0]">
-                Loading…
-              </div>
-            )}
+            {/* Content area */}
+            <div className="rounded-b-2xl border border-t-0 border-[#3a424a] bg-[#262b30]">
+              {refLoading && (
+                <div className="flex items-center justify-center gap-3 px-4 py-10 text-sm text-[#9ca3b0]">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#e31337] border-t-transparent" />
+                  <span>Loading…</span>
+                </div>
+              )}
 
-            {refError && (
-              <div className="rounded-2xl border border-red-500/30 bg-[#262b30] px-4 py-4 text-sm text-red-400">
-                {refError}
-              </div>
-            )}
+              {refError && (
+                <div className="m-4 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v4M12 16h.01" />
+                  </svg>
+                  <div>
+                    <p className="font-medium">Something went wrong</p>
+                    <p className="mt-0.5 text-red-400/80">{refError}</p>
+                  </div>
+                </div>
+              )}
 
-            {!refLoading && !refError && containerRef && (
-              <FeedComposer
-                feedType={feedType}
-                parentAuthor={containerRef.author}
-                parentPermlink={containerRef.permlink}
-                placeholder={placeholder}
-                authorMention={authorMention}
-                onSuccess={() => setOpen(false)}
-              />
-            )}
+              {!refLoading && !refError && containerRef && (
+                <FeedComposer
+                  feedType={feedType}
+                  parentAuthor={containerRef.author}
+                  parentPermlink={containerRef.permlink}
+                  placeholder={placeholder}
+                  authorMention={authorMention}
+                  onSuccess={() => {
+                    setOpen(false)
+                    setTimeout(() => void fetchFeed(), 5000)
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}

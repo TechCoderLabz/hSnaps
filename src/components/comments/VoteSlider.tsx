@@ -53,7 +53,10 @@ export function VoteSlider({
             max={100}
             value={percent}
             onChange={(e) => setPercent(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-zinc-700 accent-[#e31337]"
+            className="vote-slider h-2 w-full cursor-pointer appearance-none rounded-lg"
+            style={{
+              background: `linear-gradient(to right, #e31337 0%, #e31337 ${percent}%, #3f3f46 ${percent}%, #3f3f46 100%)`,
+            }}
           />
 
           <div className="mt-3 ml-2 flex w-full justify-between text-[10px] text-zinc-400 sm:text-xs">

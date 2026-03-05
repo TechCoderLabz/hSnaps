@@ -3,7 +3,7 @@
  * Post references from external APIs; normalized posts for UI.
  */
 
-/** Reference from Snaps/Threads/Waves/DBuzz/Moment API (author + permlink) */
+/** Reference from Snaps/Threads/Waves/DBuzz/Moments  API (author + permlink) */
 export interface PostReference {
   author: string
   permlink: string
@@ -43,7 +43,7 @@ export interface NormalizedPost {
 }
 
 /** Feed type identifiers */
-export type FeedType = 'snaps' | 'threads' | 'waves' | 'dbuzz' | 'moment'
+export type FeedType = 'snaps' | 'threads' | 'waves' | 'dbuzz' | 'moments'
 
 /** Character limits per feed type (for composer) */
 export const FEED_CHAR_LIMITS: Record<FeedType, number> = {
@@ -51,5 +51,5 @@ export const FEED_CHAR_LIMITS: Record<FeedType, number> = {
   threads: 2000,
   waves: 1000,
   dbuzz: 500,
-  moment: 300,
+  moments: 300,
 }

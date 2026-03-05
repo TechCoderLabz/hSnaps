@@ -25,7 +25,7 @@ export function AppRoutes() {
         { path: 'threads', element: <ThreadsFeed /> },
         { path: 'waves', element: <WavesFeed /> },
         { path: 'dbuzz', element: <DbuzzFeed /> },
-        { path: 'moment', element: <MomentFeed /> },
+        { path: 'moments', element: <MomentFeed /> },
         { path: 'post/:author/:permlink', element: <PostCommentsPage /> },
       ],
     },

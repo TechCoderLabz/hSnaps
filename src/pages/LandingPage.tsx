@@ -26,7 +26,7 @@ const FEATURES = [
     icon: '🐝',
   },
   {
-    title: 'Moment',
+    title: 'Moments',
     desc: 'Moments. Liketu-style captures in time.',
     icon: '⏱️',
   },
@@ -62,7 +62,7 @@ export function LandingPage() {
             <span className="text-[#e7e7f1]">Snaps, Threads, Waves & more.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-[#c8cad6]">
-            hSnaps brings Snaps, Threads, Waves, DBuzz, and Moment into one
+            hSnaps brings Snaps, Threads, Waves, DBuzz, and Moments into one
             place—real Hive data, pure Markdown, and a single feed.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
@@ -125,7 +125,7 @@ export function LandingPage() {
         </section>
 
         <footer className="border-t border-[#3a424a] px-4 py-8 text-center text-sm text-[#9ca3b0] sm:px-8">
-         <Link to="/dashboard/snaps" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Snaps </Link> · <Link to="/dashboard/threads" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Threads </Link> · <Link to="/dashboard/waves" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Waves </Link> · <Link to="/dashboard/dbuzz" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> DBuzz </Link> · <Link to="/dashboard/moment" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Moment </Link>
+         <Link to="/dashboard/snaps" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Snaps </Link> · <Link to="/dashboard/threads" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Threads </Link> · <Link to="/dashboard/waves" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Waves </Link> · <Link to="/dashboard/dbuzz" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> DBuzz </Link> · <Link to="/dashboard/moments" className="text-[#9ca3b0] hover:text-[#e7e7f1]"> Moments </Link>
           All Rights Reserved © 2026 hSnaps
        </footer>
       </div>

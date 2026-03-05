@@ -1,6 +1,6 @@
 /**
- * Feed stores (snaps, threads, waves, dbuzz, moment) using bridge APIs.
- * - Snaps/Threads/Waves/Moment: get_account_posts → get_discussion per container (replies = posts).
+ * Feed stores (snaps, threads, waves, dbuzz, moments) using bridge APIs.
+ * - Snaps/Threads/Waves/Moments: get_account_posts → get_discussion per container (replies = posts).
  * - DBuzz: get_ranked_posts with tag, paginated via nextStart.
  */
 import { create } from 'zustand'

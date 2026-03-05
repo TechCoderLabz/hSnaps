@@ -14,13 +14,15 @@ import { VoteSlider } from './comments/VoteSlider'
 import { getDiscussion } from '../services/hiveService'
 import type { NormalizedPost } from '../utils/types'
 import { useAuthData } from '../stores/authStore'
+import { useReblogStore } from '../stores/reblogStore'
+import { useReputationStore } from '../stores/reputationStore'
 
 const HIVE_AVATAR = (username: string) =>
   `https://images.hive.blog/u/${username}/avatar`
 
 function formatDate(iso: string) {
   try {
-    const d = new Date(iso)
+    const d = new Date(iso.endsWith('Z') ? iso : `${iso}Z`)
     const now = new Date()
     const diff = now.getTime() - d.getTime()
     if (diff < 60_000) return 'now'
@@ -53,10 +55,33 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   const [hasLocalUpvote, setHasLocalUpvote] = useState(false)
   const [displayNetVotes, setDisplayNetVotes] = useState(post.net_votes)
   const [checkingVoteStatus, setCheckingVoteStatus] = useState(false)
+  const [showReblogConfirm, setShowReblogConfirm] = useState(false)
+  const [reblogSubmitting, setReblogSubmitting] = useState(false)
+  const [showTipDialog, setShowTipDialog] = useState(false)
+  const [tipAmount, setTipAmount] = useState('')
+  const [tipToken, setTipToken] = useState<'HIVE' | 'HBD'>('HIVE')
+  const [tipSubmitting, setTipSubmitting] = useState(false)
+  const [tipError, setTipError] = useState<string | null>(null)
+
+  // Reblog store: on-demand checking
+  const checkReblog = useReblogStore((s) => s.checkReblog)
+  const setReblogged = useReblogStore((s) => s.setReblogged)
+  const setReblogUsername = useReblogStore((s) => s.setUsername)
+  const isReblogged = useReblogStore((s) => s.isReblogged(post.author, post.permlink))
+  const [checkingReblog, setCheckingReblog] = useState(false)
+
+  // Register author for reputation checking
+  const registerAuthor = useReputationStore((s) => s.registerAuthor)
 
   useEffect(() => {
     setDisplayNetVotes(post.net_votes)
   }, [post.net_votes])
+
+  // Register author for reputation checking + set reblog username on mount
+  useEffect(() => {
+    registerAuthor(post.author)
+    if (username) setReblogUsername(username)
+  }, [post.author, registerAuthor, username, setReblogUsername])
 
   const hasUserUpvoted = useMemo(() => {
     if (hasLocalUpvote) return true
@@ -151,11 +176,42 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     return true
   }
 
-  const handleReblog = async () => {
+  const handleReblogClick = async () => {
     if (!ensureCanAct()) return
-    const result = await aioha.reblog(post.author, post.permlink, false)
-    if (!result?.success) throw new Error(result?.error ?? 'Reblog failed')
-    toast.success('Reblogged')
+    setCheckingReblog(true)
+    try {
+      await checkReblog(post.author, post.permlink)
+    } finally {
+      setCheckingReblog(false)
+    }
+    setShowReblogConfirm(true)
+  }
+
+  const handleConfirmReblog = async () => {
+    if (!ensureCanAct()) return
+    setReblogSubmitting(true)
+    try {
+      const shouldDelete = isReblogged
+      const result = await aioha.reblog(post.author, post.permlink, shouldDelete)
+      if (result && typeof result === 'object' && result.success === true) {
+        setReblogged(post.author, post.permlink, !shouldDelete)
+        setShowReblogConfirm(false)
+        toast.success(shouldDelete ? 'Reblog removed' : 'Reblogged successfully')
+      } else {
+        const errMsg = (result as { error?: string })?.error ?? 'Reblog failed'
+        throw new Error(errMsg)
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Reblog failed'
+      const lower = msg.toLowerCase()
+      if (lower.includes('cancel') || lower.includes('reject') || lower.includes('denied')) {
+        toast.error('Reblog cancelled')
+      } else {
+        toast.error(msg)
+      }
+    } finally {
+      setReblogSubmitting(false)
+    }
   }
 
   const handleShare = async () => {
@@ -174,38 +230,68 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     }
   }
 
-  const handleTip = async () => {
+  const handleOpenTipDialog = () => {
     if (!ensureCanAct()) return
-    const amountInput = window.prompt('Enter tip amount (HIVE)', '0.100')
-    if (!amountInput) return
-    const parsed = Number.parseFloat(amountInput)
+    setTipError(null)
+    setTipAmount('')
+    setTipToken('HIVE')
+    setShowTipDialog(true)
+  }
+
+  const handleSubmitTip = async () => {
+    if (!ensureCanAct()) return
+    const parsed = Number.parseFloat(tipAmount)
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      toast.error('Invalid amount')
+      setTipError('Enter a valid amount greater than 0.')
       return
     }
-    const result = await aioha.signAndBroadcastTx(
-      [[
-        'transfer',
-        {
-          from: username,
-          to: post.author,
-          amount: `${parsed.toFixed(3)} HIVE`,
-          memo: `Tip from @${username} via hSnaps`,
-        },
-      ]],
-      KeyTypes.Active
-    )
-    if (!result?.success) throw new Error(result?.error ?? 'Tip failed')
-    toast.success('Tip sent')
+    setTipSubmitting(true)
+    setTipError(null)
+    try {
+      const amount = `${parsed.toFixed(3)} ${tipToken}`
+      const result = await aioha.signAndBroadcastTx(
+        [[
+          'transfer',
+          {
+            from: username,
+            to: post.author,
+            amount,
+            memo: `Tip from @${username} via hSnaps`,
+          },
+        ]],
+        KeyTypes.Active
+      )
+      if (result && typeof result === 'object' && result.success === true) {
+        toast.success('Tip sent successfully')
+        setShowTipDialog(false)
+        return
+      }
+      const errMsg = (result as { error?: string })?.error ?? 'Tip failed'
+      throw new Error(errMsg)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Tip failed'
+      const lower = msg.toLowerCase()
+      if (lower.includes('cancel') || lower.includes('reject') || lower.includes('denied')) {
+        setTipError('Tip cancelled.')
+      } else {
+        setTipError(msg)
+      }
+    } finally {
+      setTipSubmitting(false)
+    }
   }
 
   const handleCommentRoute = () => {
     navigate(`/dashboard/post/${post.author}/${post.permlink}`, { state: { post } })
   }
 
+  const actionBtnClass =
+    'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8]'
+
   return (
-    <article className="rounded-2xl border border-[#3a424a] bg-[#262b30] p-4 transition hover:border-[#e31337]/40">
-      <div className="flex items-start gap-3">
+    <article className="break-inside-avoid rounded-2xl border border-[#3a424a] bg-[#262b30] transition-colors duration-200 hover:border-[#e31337]/40">
+      {/* Header: avatar + author + date */}
+      <div className="flex items-center gap-3 px-4 pt-4 pb-0">
         <a
           href={`https://hive.blog/@${post.author}`}
           target="_blank"
@@ -215,85 +301,94 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           <img
             src={HIVE_AVATAR(post.author)}
             alt={post.author}
-            className="h-10 w-10 rounded-full border border-[#505863] object-cover"
+            onError={(e) => { e.currentTarget.src = HIVE_AVATAR('null') }}
+            className="h-9 w-9 rounded-full border border-[#505863] object-cover"
           />
         </a>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-[#ff8fa3]">@{post.author}</span>
-            <span className="text-xs text-[#9ca3b0]">{formatDate(post.created)}</span>
-          </div>
-          <div className="mt-2 overflow-hidden">
-            <MarkdownPreview content={post.body} className="!p-0 !border-0 !bg-transparent" />
-          </div>
-          <div className="mt-3 space-y-3">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-[#c5ccd4]">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => void openVoteSlider()}
-                  disabled={checkingVoteStatus}
-                  className="inline-flex items-center rounded-md px-1.5 py-1 transition hover:bg-[#313840]"
-                  aria-label="Upvote"
-                >
-                  <Heart
-                    className={`h-4 w-4 ${
-                      hasUserUpvoted ? 'fill-[#e31337] text-[#e31337]' : 'text-[#e31337]'
-                    }`}
-                  />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowUpvoteList(true)}
-                  className="rounded-md px-1.5 py-1 text-[#ff8fa3] transition hover:bg-[#313840]"
-                  aria-label="Open upvote list"
-                >
-                  {displayNetVotes}
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCommentRoute}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
-                aria-label="Open comments"
-              >
-                <MessageCircle className="h-4 w-4" />
-                {post.children}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleReblog()}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
-                aria-label="Reblog"
-              >
-                <Repeat2 className="h-4 w-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleShare()}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
-                aria-label="Share"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleTip()}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-[#313840]"
-                aria-label="Tip"
-              >
-                <Gift className="h-4 w-4" />
-              </button>
-            </div>
-
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold text-[#ff8fa3]">@{post.author}</span>
+            <span className="shrink-0 text-xs text-[#9ca3b0]">{formatDate(post.created)}</span>
           </div>
         </div>
       </div>
+
+      {/* Body */}
+      <div className="px-4 pt-2 pb-1 overflow-hidden">
+        <MarkdownPreview content={post.body} className="!p-0 !border-0 !bg-transparent" />
+      </div>
+
+      {/* Action bar */}
+      <div className="flex items-center gap-1 border-t border-[#3a424a]/60 px-2 py-1.5">
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => void openVoteSlider()}
+            disabled={checkingVoteStatus}
+            className={actionBtnClass}
+            aria-label="Upvote"
+          >
+            <Heart
+              className={`h-4 w-4 ${
+                hasUserUpvoted ? 'fill-[#e31337] text-[#e31337]' : 'text-[#e31337]'
+              }`}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowUpvoteList(true)}
+            className="rounded-lg px-1.5 py-1.5 text-xs font-medium text-[#ff8fa3] transition-colors duration-200 hover:bg-[#2f353d]"
+            aria-label="Open upvote list"
+          >
+            {displayNetVotes}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCommentRoute}
+          className={actionBtnClass}
+          aria-label="Open comments"
+        >
+          <MessageCircle className="h-4 w-4" />
+          <span className="text-xs">{post.children}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void handleReblogClick()}
+          disabled={reblogSubmitting || checkingReblog}
+          className={actionBtnClass}
+          aria-label="Reblog"
+        >
+          {checkingReblog ? (
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#9ca3b0] border-t-transparent" />
+          ) : (
+            <Repeat2 className={`h-4 w-4 ${isReblogged ? 'text-[#3b82f6]' : ''}`} />
+          )}
+        </button>
+
+        <div className="flex-1" />
+
+        <button
+          type="button"
+          onClick={() => void handleShare()}
+          className={actionBtnClass}
+          aria-label="Share"
+        >
+          <Share2 className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleOpenTipDialog}
+          className={actionBtnClass}
+          aria-label="Tip"
+        >
+          <Gift className="h-4 w-4" />
+        </button>
+      </div>
+
       {showUpvoteList && (
         <UpvoteListModal
           author={post.author}
@@ -317,6 +412,94 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           }}
           onCancel={() => setShowUpvoteSlider(false)}
         />
+      )}
+      {showReblogConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-xl border border-[#3a424a] bg-[#262b30] p-5 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">
+              {isReblogged ? 'Remove reblog?' : 'Reblog this post?'}
+            </h3>
+            <p className="mt-2 text-sm text-[#9ca3b0]">
+              {isReblogged
+                ? 'This post will be removed from your blog and personal feed.'
+                : 'This post will appear on your blog and personal feed.'}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReblogConfirm(false)}
+                disabled={reblogSubmitting}
+                className="rounded-lg border border-[#3a424a] bg-[#262b30] px-4 py-2 text-sm font-medium text-[#f0f0f8] transition-colors hover:bg-[#2f353d] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmReblog()}
+                disabled={reblogSubmitting}
+                className="rounded-lg border border-[#e31337]/60 bg-[#e31337] px-4 py-2 text-sm font-semibold text-[#f0f0f8] transition-colors hover:bg-[#c0102f] disabled:opacity-50"
+              >
+                {reblogSubmitting
+                  ? 'Confirming...'
+                  : isReblogged
+                    ? 'Remove reblog'
+                    : 'Reblog'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showTipDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-xl border border-[#3a424a] bg-[#262b30] p-5 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">Send tip</h3>
+            <p className="mt-1 text-sm text-[#9ca3b0]">
+              Send tip to @{post.author}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <input
+                type="number"
+                step="0.001"
+                min="0"
+                value={tipAmount}
+                onChange={(e) => setTipAmount(e.target.value)}
+                placeholder="Amount"
+                className="w-full rounded-lg border border-[#3a424a] bg-[#1a1e22] px-3 py-2 text-sm text-white placeholder-[#9ca3b0] outline-none focus:border-[#e31337]/60"
+              />
+              <select
+                value={tipToken}
+                onChange={(e) => setTipToken(e.target.value as 'HIVE' | 'HBD')}
+                className="rounded-lg border border-[#3a424a] bg-[#1a1e22] px-3 py-2 text-sm text-white outline-none focus:border-[#e31337]/60"
+              >
+                <option value="HIVE">HIVE</option>
+                <option value="HBD">HBD</option>
+              </select>
+            </div>
+            {tipError && (
+              <p className="mt-3 rounded-md border border-[#e31337]/45 bg-[#e31337]/12 px-3 py-2 text-sm text-[#f0f0f8]">
+                {tipError}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowTipDialog(false)}
+                disabled={tipSubmitting}
+                className="rounded-lg border border-[#3a424a] bg-[#262b30] px-4 py-2 text-sm font-medium text-[#f0f0f8] transition-colors hover:bg-[#2f353d] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSubmitTip()}
+                disabled={tipSubmitting}
+                className="rounded-lg border border-[#e31337]/60 bg-[#e31337] px-4 py-2 text-sm font-semibold text-[#f0f0f8] transition-colors hover:bg-[#c0102f] disabled:opacity-50"
+              >
+                {tipSubmitting ? 'Sending...' : 'Tip'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </article>
   )

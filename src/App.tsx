@@ -13,7 +13,7 @@ const aioha = initAioha({
   },
   hiveauth: {
     name: 'hSnaps',
-    description: 'hSnaps · Snaps · Threads · Waves · DBuzz · Moment',
+    description: 'hSnaps · Snaps · Threads · Waves · DBuzz · Moments',
   },
 })
 

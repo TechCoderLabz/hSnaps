@@ -20,7 +20,7 @@ export function MarkdownPreview({ content, className = '' }: MarkdownPreviewProp
       <div
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: html }}
-        className="markdown-preview break-words [&_img]:max-w-full [&_a]:text-amber-400 [&_a]:underline"
+        className="markdown-preview overflow-hidden break-words [&_img]:max-w-full [&_a]:text-amber-400 [&_a]:underline"
       />
     </div>
   )

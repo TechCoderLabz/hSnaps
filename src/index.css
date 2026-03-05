@@ -2,6 +2,10 @@
 @import "hive-react-kit/build.css";
 @import "hive-authentication/build.css";
 
+@theme {
+  --breakpoint-3xl: 1920px;
+}
+
 /* Hive theme tokens */
 :root {
   --hive-red: #e31337;
@@ -34,6 +38,64 @@ body {
   background: #2b3138;
   border-radius: 0.5rem;
 }
+/* ComposeFab modal animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Masonry feed grid – row-wise ordering with dynamic card heights */
+.feed-grid {
+  display: flex;
+  margin-left: -1rem;
+  width: auto;
+}
+.feed-grid_column {
+  padding-left: 1rem;
+  background-clip: padding-box;
+}
+.feed-grid_column > * {
+  margin-bottom: 1rem;
+}
+
+/* VoteSlider custom range thumb */
+.vote-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #e31337;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.vote-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #e31337;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
 .markdown-preview img {
   display: block;
   max-width: 100%;
@@ -43,4 +105,41 @@ body {
   margin: 0.5rem auto;
   border-radius: 0.75rem;
   object-fit: contain;
+}
+
+/* Constrain iframes (YouTube, X.com embeds, etc.) */
+.markdown-preview iframe {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: 0.5rem 0;
+  border-radius: 0.75rem;
+  border: none;
+}
+
+/* Constrain video and embed elements */
+.markdown-preview video,
+.markdown-preview embed,
+.markdown-preview object {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.5rem 0;
+  border-radius: 0.75rem;
+}
+
+/* Prevent any child from overflowing the card */
+.markdown-preview {
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* Twitter/X embeds — constrain the wrapper */
+.markdown-preview .twitter-tweet,
+.markdown-preview blockquote[class*="twitter"] {
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow: hidden;
 }
