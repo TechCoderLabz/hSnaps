@@ -16,7 +16,11 @@ export function IgnoredPage() {
 
   useEffect(() => {
     if (!isAuthenticated || !token) return
-    fetchList(token).catch(() => toast.error('Failed to load ignored authors'))
+    const abortController = new AbortController()
+    fetchList(token, abortController.signal).catch(() => {
+      if (!abortController.signal.aborted) toast.error('Failed to load ignored authors')
+    })
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [isAuthenticated, token, fetchList])
 
   const handleAdd = async (e: React.FormEvent) => {

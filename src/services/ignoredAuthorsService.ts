@@ -14,10 +14,11 @@ function authHeader(token: string): Record<string, string> {
   }
 }
 
-export async function getIgnoredAuthors(token: string): Promise<string[]> {
+export async function getIgnoredAuthors(token: string, signal?: AbortSignal): Promise<string[]> {
   const res = await fetch(IGNORED_AUTHORS_URL, {
     method: 'GET',
     headers: authHeader(token),
+    signal,
   })
   if (!res.ok) throw new Error(`Ignored authors: ${res.status}`)
   const data = await res.json()

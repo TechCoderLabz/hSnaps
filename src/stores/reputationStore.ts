@@ -62,8 +62,8 @@ interface ReputationState {
   flushPending: () => Promise<void>
 }
 
-async function fetchReputation(username: string): Promise<number> {
-  const res = await fetch(`${REPUTATION_API}/${username}/reputation`)
+async function fetchReputation(username: string, signal?: AbortSignal): Promise<number> {
+  const res = await fetch(`${REPUTATION_API}/${username}/reputation`, { signal })
   if (!res.ok) return -1
   const text = await res.text()
   const num = Number(text)

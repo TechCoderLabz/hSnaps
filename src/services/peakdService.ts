@@ -23,10 +23,11 @@ export interface TrendingCommunity {
 }
 
 /** GET trending/tags?container=peak.snaps */
-export async function getTrendingTags(container: string): Promise<TrendingTag[]> {
+export async function getTrendingTags(container: string, signal?: AbortSignal): Promise<TrendingTag[]> {
   const url = `${PEAKD_BASE}/trending/tags?container=${encodeURIComponent(container)}`
   const res = await fetch(url, {
     headers: { accept: 'application/json, text/plain, */*' },
+    signal,
   })
   if (!res.ok) throw new Error('PeakD tags error')
   const data = (await res.json()) as TrendingTag[]
@@ -34,10 +35,11 @@ export async function getTrendingTags(container: string): Promise<TrendingTag[]>
 }
 
 /** GET trending/authors?container=peak.snaps */
-export async function getTrendingAuthors(container: string): Promise<TrendingAuthor[]> {
+export async function getTrendingAuthors(container: string, signal?: AbortSignal): Promise<TrendingAuthor[]> {
   const url = `${PEAKD_BASE}/trending/authors?container=${encodeURIComponent(container)}`
   const res = await fetch(url, {
     headers: { accept: 'application/json, text/plain, */*' },
+    signal,
   })
   if (!res.ok) throw new Error('PeakD authors error')
   const data = (await res.json()) as TrendingAuthor[]
@@ -45,10 +47,11 @@ export async function getTrendingAuthors(container: string): Promise<TrendingAut
 }
 
 /** GET trending/communities?container=peak.snaps */
-export async function getTrendingCommunities(container: string): Promise<TrendingCommunity[]> {
+export async function getTrendingCommunities(container: string, signal?: AbortSignal): Promise<TrendingCommunity[]> {
   const url = `${PEAKD_BASE}/trending/communities?container=${encodeURIComponent(container)}`
   const res = await fetch(url, {
     headers: { accept: 'application/json, text/plain, */*' },
+    signal,
   })
   if (!res.ok) throw new Error('PeakD communities error')
   const data = (await res.json()) as TrendingCommunity[]

@@ -22,11 +22,11 @@ const feedSlice = (s: { posts: NormalizedPost[]; loading: boolean }) => ({
   loading: s.loading,
 })
 
-function fetchAllFeeds() {
-  useSnapsStore.getState().fetchFeed()
-  useThreadsStore.getState().fetchFeed()
-  useWavesStore.getState().fetchFeed()
-  useMomentStore.getState().fetchFeed()
+function fetchAllFeeds(signal?: AbortSignal) {
+  useSnapsStore.getState().fetchFeed(signal)
+  useThreadsStore.getState().fetchFeed(signal)
+  useWavesStore.getState().fetchFeed(signal)
+  useMomentStore.getState().fetchFeed(signal)
 }
 
 export function TagFeedPage() {
@@ -43,7 +43,9 @@ export function TagFeedPage() {
   const { isAuthenticated } = useAuthData()
 
   useEffect(() => {
-    fetchAllFeeds()
+    const abortController = new AbortController()
+    fetchAllFeeds(abortController.signal)
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [])
 
   const { posts, loading } = useMemo(() => {

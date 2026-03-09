@@ -28,9 +28,9 @@ export function SnapsFeed() {
   const useGrid = isDesktop && viewMode === 'grid'
 
   useEffect(() => {
-    let cancelled = false
-    fetchFeed().then(() => { if (cancelled) return })
-    return () => { cancelled = true }
+    const abortController = new AbortController()
+    fetchFeed(abortController.signal)
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [fetchFeed])
 
   const filteredPosts = posts.filter(

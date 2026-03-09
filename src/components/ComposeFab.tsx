@@ -42,12 +42,23 @@ export function ComposeFab({
 
   useEffect(() => {
     if (!open) return
+    const abortController = new AbortController()
+    const signal = abortController.signal
     setRefLoading(true)
     setRefError(null)
-    getLatestContainer(feedType, observer)
-      .then(setContainerRef)
-      .catch((e) => setRefError(e instanceof Error ? e.message : 'Failed to load container'))
-      .finally(() => setRefLoading(false))
+    getLatestContainer(feedType, observer, signal)
+      .then((data) => {
+        if (signal.aborted) return
+        setContainerRef(data)
+      })
+      .catch((e) => {
+        if (signal.aborted) return
+        setRefError(e instanceof Error ? e.message : 'Failed to load container')
+      })
+      .finally(() => {
+        if (!signal.aborted) setRefLoading(false)
+      })
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [open, feedType, observer])
 
   if (!isAuthenticated) return null

@@ -14,7 +14,7 @@ interface IgnoredAuthorsState {
   loading: boolean
   error: string | null
   setList: (list: string[]) => void
-  fetchList: (token: string) => Promise<void>
+  fetchList: (token: string, signal?: AbortSignal) => Promise<void>
   addAuthor: (token: string, username: string) => Promise<void>
   removeAuthor: (token: string, username: string) => Promise<void>
   isIgnored: (username: string) => boolean
@@ -27,12 +27,13 @@ export const useIgnoredAuthorsStore = create<IgnoredAuthorsState>((set, get) => 
 
   setList: (list: string[]) => set({ list }),
 
-  fetchList: async (token: string) => {
+  fetchList: async (token: string, signal?: AbortSignal) => {
     set({ loading: true, error: null })
     try {
-      const list = await getIgnoredAuthors(token)
+      const list = await getIgnoredAuthors(token, signal)
       set({ list, loading: false })
     } catch (e) {
+      if (signal?.aborted) return
       set({
         error: e instanceof Error ? e.message : 'Failed to load ignored authors',
         loading: false,

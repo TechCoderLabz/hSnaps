@@ -56,11 +56,12 @@ export function PostCommentsPage() {
   const resolvedAuthor = author ?? rootPost?.author
   const resolvedPermlink = permlink ?? rootPost?.permlink
 
-  const fetchRootPost = useCallback(async () => {
+  const fetchRootPost = useCallback(async (signal?: AbortSignal) => {
     if (rootPost || !resolvedAuthor || !resolvedPermlink) return
     try {
       const observer = username ?? ''
-      const discussion = await getDiscussion(resolvedAuthor, resolvedPermlink, observer)
+      const discussion = await getDiscussion(resolvedAuthor, resolvedPermlink, observer, signal)
+      if (signal?.aborted) return
       const key = Object.keys(discussion).find(
         (k) => discussion[k]?.author === resolvedAuthor && discussion[k]?.permlink === resolvedPermlink
       )
@@ -68,12 +69,13 @@ export function PostCommentsPage() {
         setRootPost(normalizeBridgePost(discussion[key]))
       }
     } catch (err) {
+      if (signal?.aborted) return
       console.error('Failed to fetch root post:', err)
     }
   }, [resolvedAuthor, resolvedPermlink, rootPost])
 
   const fetchComments = useCallback(
-    async (isRefresh = false) => {
+    async (isRefresh = false, signal?: AbortSignal) => {
       if (!resolvedAuthor || !resolvedPermlink) return
       if (isRefresh) {
         setIsRefreshing(true)
@@ -83,24 +85,32 @@ export function PostCommentsPage() {
       setError(null)
       try {
         const fetchedComments = await getCommentsList(resolvedAuthor, resolvedPermlink)
+        if (signal?.aborted) return
         setComments(fetchedComments)
         setFilteredComments(fetchedComments)
       } catch (err) {
+        if (signal?.aborted) return
         setError(err instanceof Error ? err.message : 'Failed to load comments')
       } finally {
-        setLoading(false)
-        setIsRefreshing(false)
+        if (!signal?.aborted) {
+          setLoading(false)
+          setIsRefreshing(false)
+        }
       }
     },
     [resolvedAuthor, resolvedPermlink]
   )
 
   useEffect(() => {
-    void fetchRootPost()
+    const abortController = new AbortController()
+    void fetchRootPost(abortController.signal)
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [fetchRootPost])
 
   useEffect(() => {
-    void fetchComments()
+    const abortController = new AbortController()
+    void fetchComments(false, abortController.signal)
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [fetchComments])
 
   useEffect(() => {
