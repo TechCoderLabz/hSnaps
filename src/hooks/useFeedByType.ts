@@ -14,10 +14,10 @@ import type { NormalizedPost } from '../utils/types'
 export type UnifiedFeedType = 'snaps' | 'threads' | 'waves' | 'moments'
 
 const FETCH_BY_TYPE = {
-  snaps: () => useSnapsStore.getState().fetchFeed(),
-  threads: () => useThreadsStore.getState().fetchFeed(),
-  waves: () => useWavesStore.getState().fetchFeed(),
-  moments: () => useMomentStore.getState().fetchFeed(),
+  snaps: (signal?: AbortSignal) => useSnapsStore.getState().fetchFeed(signal),
+  threads: (signal?: AbortSignal) => useThreadsStore.getState().fetchFeed(signal),
+  waves: (signal?: AbortSignal) => useWavesStore.getState().fetchFeed(signal),
+  moments: (signal?: AbortSignal) => useMomentStore.getState().fetchFeed(signal),
 } as const
 
 const feedSliceSelector = (s: {
@@ -81,7 +81,9 @@ export function useFeedByType(feedType: UnifiedFeedType) {
   }
 
   useEffect(() => {
-    FETCH_BY_TYPE[feedType]()
+    const abortController = new AbortController()
+    FETCH_BY_TYPE[feedType](abortController.signal)
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [feedType])
 
   return {

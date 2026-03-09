@@ -30,8 +30,10 @@ export function DashboardLayout() {
 
   useEffect(() => {
     if (token) {
-      fetchIgnoredList(token).catch(() => {})
+      const abortController = new AbortController()
+      fetchIgnoredList(token, abortController.signal).catch(() => {})
       prevTokenRef.current = token
+      return () => { abortController.abort('avoid duplicate requests') }
     } else {
       setIgnoredList([])
       prevTokenRef.current = null

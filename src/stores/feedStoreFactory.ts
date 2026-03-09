@@ -15,8 +15,8 @@ export interface FeedState {
   hasMore: boolean
   page: number
   nextCursor: FeedPageCursor | null
-  fetchFeed: () => Promise<void>
-  loadMore: () => Promise<void>
+  fetchFeed: (signal?: AbortSignal) => Promise<void>
+  loadMore: (signal?: AbortSignal) => Promise<void>
   reset: () => void
 }
 
@@ -32,11 +32,11 @@ const initialState = {
 export function createFeedStore(feedType: FeedType) {
   return create<FeedState>((set, get) => ({
     ...initialState,
-    fetchFeed: async () => {
+    fetchFeed: async (signal?: AbortSignal) => {
       set({ loading: true, error: null, page: 1, nextCursor: null })
       const observer = useAppAuthStore.getState().username ?? ''
       try {
-        const { posts, hasMore, nextCursor } = await fetchFeedPage(feedType, 1, observer, null)
+        const { posts, hasMore, nextCursor } = await fetchFeedPage(feedType, 1, observer, null, signal)
         set({
           posts,
           hasMore,
@@ -46,13 +46,14 @@ export function createFeedStore(feedType: FeedType) {
           error: null,
         })
       } catch (e) {
+        if (signal?.aborted) return
         set({
           loading: false,
           error: e instanceof Error ? e.message : 'Failed to fetch',
         })
       }
     },
-    loadMore: async () => {
+    loadMore: async (signal?: AbortSignal) => {
       const { page, nextCursor, loading, hasMore } = get()
       if (loading || !hasMore) return
       set({ loading: true })
@@ -63,7 +64,8 @@ export function createFeedStore(feedType: FeedType) {
           feedType,
           nextPage,
           observer,
-          nextCursor
+          nextCursor,
+          signal
         )
         set((s) => ({
           posts: [...s.posts, ...newPosts],
@@ -73,6 +75,7 @@ export function createFeedStore(feedType: FeedType) {
           loading: false,
         }))
       } catch (e) {
+        if (signal?.aborted) return
         set({
           loading: false,
           error: e instanceof Error ? e.message : 'Failed to load more',

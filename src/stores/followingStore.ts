@@ -12,7 +12,7 @@ interface FollowingState {
   error: string | null
   /** Last username we fetched followings for (to avoid refetch when switching filters) */
   lastFetchedFor: string | null
-  fetchFollowings: (username: string) => Promise<void>
+  fetchFollowings: (username: string, signal?: AbortSignal) => Promise<void>
   isFollowing: (username: string) => boolean
   reset: () => void
 }
@@ -27,7 +27,7 @@ const initialState = {
 export const useFollowingStore = create<FollowingState>((set, get) => ({
   ...initialState,
 
-  fetchFollowings: async (username: string) => {
+  fetchFollowings: async (username: string, signal?: AbortSignal) => {
     const trimmed = username.trim().toLowerCase()
     if (!trimmed) {
       set({ followingSet: new Set(), lastFetchedFor: null })
@@ -36,10 +36,11 @@ export const useFollowingStore = create<FollowingState>((set, get) => ({
     if (get().lastFetchedFor === trimmed) return
     set({ loading: true, error: null })
     try {
-      const result = await getFollowing(trimmed, '', 'blog', 1000)
+      const result = await getFollowing(trimmed, '', 'blog', 1000, signal)
       const followingSet = new Set<string>(result.map((r) => r.following.toLowerCase()))
       set({ followingSet, lastFetchedFor: trimmed, loading: false })
     } catch (e) {
+      if (signal?.aborted) return
       set({
         error: e instanceof Error ? e.message : 'Failed to load followings',
         loading: false,

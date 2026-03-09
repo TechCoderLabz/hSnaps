@@ -44,7 +44,7 @@ const CONDENSER_RPC_NODES = [
 ]
 
 /** JSON-RPC call to Hive (condenser_api — params is an array, tries multiple nodes) */
-async function callCondenserApi<T>(method: string, params: unknown[]): Promise<T> {
+async function callCondenserApi<T>(method: string, params: unknown[], signal?: AbortSignal): Promise<T> {
   const id = Math.floor(Math.random() * 1e9)
   const body = JSON.stringify({ id, jsonrpc: '2.0', method: `condenser_api.${method}`, params })
   let lastError: Error | null = null
@@ -58,6 +58,7 @@ async function callCondenserApi<T>(method: string, params: unknown[]): Promise<T
           origin: 'https://peakd.com',
         },
         body,
+        signal,
       })
       if (!res.ok) throw new Error(`Hive RPC error: ${res.status}`)
       const data = (await res.json()) as { result?: T; error?: { message: string } }
@@ -71,7 +72,7 @@ async function callCondenserApi<T>(method: string, params: unknown[]): Promise<T
 }
 
 /** JSON-RPC call to Hive (bridge) */
-async function callHiveRpc<T>(method: string, params: Record<string, unknown>): Promise<T> {
+async function callHiveRpc<T>(method: string, params: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
   const id = Math.floor(Math.random() * 1e9)
   const res = await fetch(HIVE_RPC_URL, {
     method: 'POST',
@@ -81,6 +82,7 @@ async function callHiveRpc<T>(method: string, params: Record<string, unknown>): 
       origin: 'https://peakd.com',
     },
     body: JSON.stringify({ id, jsonrpc: '2.0', method, params }),
+    signal,
   })
   if (!res.ok) throw new Error(`Hive RPC error: ${res.status}`)
   const data = (await res.json()) as { result?: T; error?: { message: string } }
@@ -94,7 +96,8 @@ export async function getAccountPosts(
   limit: number,
   startAuthor: string | null = null,
   startPermlink: string | null = null,
-  observer: string = ''
+  observer: string = '',
+  signal?: AbortSignal
 ): Promise<BridgePost[]> {
   const result = await callHiveRpc<BridgePost[]>('bridge.get_account_posts', {
     sort: 'posts',
@@ -103,7 +106,7 @@ export async function getAccountPosts(
     limit,
     start_author: startAuthor,
     start_permlink: startPermlink,
-  })
+  }, signal)
   return Array.isArray(result) ? result : []
 }
 
@@ -111,13 +114,14 @@ export async function getAccountPosts(
 export async function getDiscussion(
   author: string,
   permlink: string,
-  observer: string = ''
+  observer: string = '',
+  signal?: AbortSignal
 ): Promise<Record<string, BridgePost>> {
   const result = await callHiveRpc<Record<string, BridgePost>>('bridge.get_discussion', {
     author,
     permlink,
     observer,
-  })
+  }, signal)
   return result ?? {}
 }
 
@@ -196,18 +200,19 @@ export const CONTAINER_ACCOUNTS: Record<FeedType, string> = {
  */
 export async function getLatestContainer(
   feedType: FeedType,
-  observer: string = ''
+  observer: string = '',
+  signal?: AbortSignal
 ): Promise<{ author: string; permlink: string }> {
   const account = CONTAINER_ACCOUNTS[feedType]
-  const containers = await getAccountPosts(account, 1, null, null, observer)
+  const containers = await getAccountPosts(account, 1, null, null, observer, signal)
   if (!containers.length) throw new Error(`No container found for ${feedType}`)
   const c = containers[0]
   return { author: c.author, permlink: c.permlink }
 }
 
 /** condenser_api.get_reblogged_by — returns list of accounts who reblogged a post */
-export async function getRebloggedBy(author: string, permlink: string): Promise<string[]> {
-  const result = await callCondenserApi<string[]>('get_reblogged_by', [author, permlink])
+export async function getRebloggedBy(author: string, permlink: string, signal?: AbortSignal): Promise<string[]> {
+  const result = await callCondenserApi<string[]>('get_reblogged_by', [author, permlink], signal)
   return Array.isArray(result) ? result : []
 }
 
@@ -217,8 +222,8 @@ export interface FollowCount {
   following_count: number
 }
 
-export async function getFollowCount(account: string): Promise<FollowCount> {
-  const result = await callCondenserApi<FollowCount>('get_follow_count', [account])
+export async function getFollowCount(account: string, signal?: AbortSignal): Promise<FollowCount> {
+  const result = await callCondenserApi<FollowCount>('get_follow_count', [account], signal)
   if (!result) {
     return { follower_count: 0, following_count: 0 }
   }
@@ -240,14 +245,15 @@ export async function getFollowing(
   follower: string,
   startAccount: string = '',
   followType: string = 'blog',
-  limit: number = 1000
+  limit: number = 1000,
+  signal?: AbortSignal
 ): Promise<GetFollowingItem[]> {
   const result = await callCondenserApi<GetFollowingItem[]>('get_following', [
     follower,
     startAccount,
     followType,
     limit,
-  ])
+  ], signal)
   return Array.isArray(result) ? result : []
 }
 
@@ -265,7 +271,8 @@ export async function fetchFeedPage(
   feedType: FeedType,
   _page: number,
   observer: string = '',
-  cursor: FeedPageCursor | null = null
+  cursor: FeedPageCursor | null = null,
+  signal?: AbortSignal
 ): Promise<{ posts: NormalizedPost[]; hasMore: boolean; nextCursor: FeedPageCursor | null }> {
   const limit = 20
   const account = CONTAINER_ACCOUNTS[feedType]
@@ -274,13 +281,14 @@ export async function fetchFeedPage(
     limit,
     cursor?.author ?? null,
     cursor?.permlink ?? null,
-    observer
+    observer,
+    signal
   )
   if (containers.length === 0) {
     return { posts: [], hasMore: false, nextCursor: null }
   }
   const container = containers[0]
-  const discussion = await getDiscussion(container.author, container.permlink, observer)
+  const discussion = await getDiscussion(container.author, container.permlink, observer, signal)
   const posts = discussionRepliesToPosts(discussion, container.author, container.permlink)
   const lastContainer = containers[containers.length - 1]
   const nextCursor: FeedPageCursor | null =

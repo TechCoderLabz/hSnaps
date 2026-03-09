@@ -15,13 +15,14 @@ export interface BookmarkItem {
   _id?: string
 }
 
-export async function getBookmarks(token: string): Promise<BookmarkItem[]> {
+export async function getBookmarks(token: string, signal?: AbortSignal): Promise<BookmarkItem[]> {
   const res = await fetch(BOOKMARKS_BASE, {
     method: 'GET',
     headers: {
       authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
+    signal,
   })
   if (!res.ok) throw new Error(`Bookmarks: ${res.status}`)
   const data = await res.json()

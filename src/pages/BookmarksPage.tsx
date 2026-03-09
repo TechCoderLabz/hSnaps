@@ -15,17 +15,23 @@ export function BookmarksPage() {
   const [error, setError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
 
-  const loadBookmarks = useCallback(() => {
+  const loadBookmarks = useCallback((signal?: AbortSignal) => {
     if (!token) return
     setLoading(true)
     setError(null)
-    getBookmarks(token)
-      .then(setItems)
+    getBookmarks(token, signal)
+      .then((data) => {
+        if (signal?.aborted) return
+        setItems(data)
+      })
       .catch((e) => {
+        if (signal?.aborted) return
         setError(e instanceof Error ? e.message : 'Failed to load bookmarks')
         toast.error('Failed to load bookmarks')
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!signal?.aborted) setLoading(false)
+      })
   }, [token])
 
   useEffect(() => {
@@ -34,7 +40,9 @@ export function BookmarksPage() {
       setError('Please log in to view bookmarks.')
       return
     }
-    loadBookmarks()
+    const abortController = new AbortController()
+    loadBookmarks(abortController.signal)
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [isAuthenticated, token, loadBookmarks])
 
   const handleRemove = async (author: string, permlink: string) => {

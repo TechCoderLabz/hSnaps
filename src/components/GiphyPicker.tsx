@@ -24,6 +24,7 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
   const isMobile = isMobilePlatform();
 
   useEffect(() => {
@@ -34,6 +35,10 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
 
   const searchGifs = async (query: string) => {
     if (!query.trim()) return;
+    // Abort any previous search request
+    searchAbortRef.current?.abort('avoid duplicate requests');
+    const abortController = new AbortController();
+    searchAbortRef.current = abortController;
     setIsLoading(true);
     setError(null);
     try {
@@ -42,15 +47,17 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
         throw new Error("GIPHY API key not found. Add VITE_GIPHY_KEY to your .env file");
       }
       const response = await fetch(
-        `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=20&rating=g`
+        `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=20&rating=g`,
+        { signal: abortController.signal }
       );
       if (!response.ok) throw new Error(`Failed to fetch GIFs: ${response.statusText}`);
       const data = await response.json();
       setGifs(data.data || []);
     } catch (err) {
+      if (abortController.signal.aborted) return;
       setError(err instanceof Error ? err.message : "Failed to search GIFs");
     } finally {
-      setIsLoading(false);
+      if (!abortController.signal.aborted) setIsLoading(false);
     }
   };
 

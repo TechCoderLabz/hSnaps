@@ -53,7 +53,9 @@ export function UserProfilePage() {
 
   useEffect(() => {
     if (!currentUsername) return
-    fetchFollowings(currentUsername).catch(() => {})
+    const abortController = new AbortController()
+    fetchFollowings(currentUsername, abortController.signal).catch(() => {})
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [currentUsername, fetchFollowings])
 
   // On profile page we always want "Newest" filter, and no dropdown is shown in header.
@@ -63,12 +65,13 @@ export function UserProfilePage() {
 
   useEffect(() => {
     if (!profileUsername) return
-    let cancelled = false
+    const abortController = new AbortController()
+    const signal = abortController.signal
     setProfileLoading(true)
     ;(async () => {
       try {
-        const counts = await getFollowCount(profileUsername)
-        if (cancelled) return
+        const counts = await getFollowCount(profileUsername, signal)
+        if (signal.aborted) return
         const isFollowing = currentUsername
           ? isFollowingStore(profileUsername)
           : false
@@ -78,20 +81,19 @@ export function UserProfilePage() {
           followingCount: counts.following_count ?? 0,
         })
       } catch (e) {
-        if (!cancelled) {
-          setProfile((prev) => ({
-            ...prev,
-            isFollowing: currentUsername
-              ? isFollowingStore(profileUsername)
-              : false,
-          }))
-        }
+        if (signal.aborted) return
+        setProfile((prev) => ({
+          ...prev,
+          isFollowing: currentUsername
+            ? isFollowingStore(profileUsername)
+            : false,
+        }))
       } finally {
-        if (!cancelled) setProfileLoading(false)
+        if (!signal.aborted) setProfileLoading(false)
       }
     })()
     return () => {
-      cancelled = true
+      abortController.abort('avoid duplicate requests')
     }
   }, [profileUsername, currentUsername, isFollowingStore])
 
