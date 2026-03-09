@@ -78,7 +78,6 @@ export function SnapsFeed() {
                 key={`${post.author}/${post.permlink}`}
                 post={post}
                 readOnly={!isAuthenticated}
-                variant={useGrid ? 'grid' : 'list'}
               />
             ))
           )}

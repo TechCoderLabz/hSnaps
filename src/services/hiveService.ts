@@ -211,6 +211,32 @@ export async function getRebloggedBy(author: string, permlink: string): Promise<
   return Array.isArray(result) ? result : []
 }
 
+/** condenser_api.get_following response item */
+export interface GetFollowingItem {
+  follower: string
+  following: string
+  what: string[]
+}
+
+/**
+ * condenser_api.get_following — returns list of accounts the user follows (blog).
+ * Used to filter "Following" feed to show posts only from followed users.
+ */
+export async function getFollowing(
+  follower: string,
+  startAccount: string = '',
+  followType: string = 'blog',
+  limit: number = 1000
+): Promise<GetFollowingItem[]> {
+  const result = await callCondenserApi<GetFollowingItem[]>('get_following', [
+    follower,
+    startAccount,
+    followType,
+    limit,
+  ])
+  return Array.isArray(result) ? result : []
+}
+
 /** Cursor for next page of containers (older posts). */
 export interface FeedPageCursor {
   author: string
