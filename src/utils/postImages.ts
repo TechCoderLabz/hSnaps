@@ -10,10 +10,28 @@ function getMetadataImages(jsonMetadata: string | undefined): string[] {
   try {
     const trimmed = jsonMetadata.trim()
     if (!trimmed) return []
-    const meta = JSON.parse(trimmed) as { image?: string | string[] }
-    if (Array.isArray(meta.image)) return meta.image.filter((u): u is string => typeof u === 'string' && u.length > 0)
-    if (typeof meta.image === 'string' && meta.image.length > 0) return [meta.image]
-    return []
+    const meta = JSON.parse(trimmed) as {
+      image?: string | string[]
+      video?: { thumbnail?: string } | Record<string, unknown>
+    }
+
+    const out: string[] = []
+
+    if (Array.isArray(meta.image)) {
+      out.push(...meta.image.filter((u): u is string => typeof u === 'string' && u.length > 0))
+    } else if (typeof meta.image === 'string' && meta.image.length > 0) {
+      out.push(meta.image)
+    }
+
+    const thumb =
+      meta.video && typeof meta.video === 'object'
+        ? (meta.video as { thumbnail?: string }).thumbnail
+        : undefined
+    if (typeof thumb === 'string' && thumb.length > 0 && !out.includes(thumb)) {
+      out.push(thumb)
+    }
+
+    return out
   } catch {
     return []
   }

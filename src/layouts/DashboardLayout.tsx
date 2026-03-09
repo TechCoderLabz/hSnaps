@@ -9,8 +9,11 @@ import { useAuthStore as useHiveAuthStore } from 'hive-authentication'
 import { AppHeader } from '../components/AppHeader'
 import { AppDrawer } from '../components/AppDrawer'
 import { HiveLoginButton } from '../components/HiveLoginButton'
+import { FeedFilterDropdown } from '../components/FeedFilterDropdown'
 import { useFeedColumnCount } from '../hooks/useFeedColumnCount'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
+import { useFeedFilterStore } from '../stores/feedFilterStore'
+import { useFollowingStore } from '../stores/followingStore'
 import { isMobilePlatform } from '../utils/platform-detection'
 import { useAuthData } from '../stores/authStore'
 
@@ -46,12 +49,15 @@ export function DashboardLayout() {
         // User logged out
         prevTokenRef.current = null
         useIgnoredAuthorsStore.getState().setList([])
+        useFeedFilterStore.getState().setFeedFilter('newest')
+        useFollowingStore.getState().reset()
       } else if (
         currentUser &&
         previousUser &&
         currentUser.username !== previousUser.username
       ) {
-        // User switched: refetch ignored list for the new user's token
+        // User switched: refetch ignored list and reset following for the new user
+        useFollowingStore.getState().reset()
         try {
           const parsed = JSON.parse(currentUser.serverResponse) as Record<string, string>
           const currentToken = parsed?.token ?? null
@@ -83,7 +89,14 @@ export function DashboardLayout() {
     return unsubscribe
   }, [])
 
-  const headerRight = isMobileView ? <></> : <HiveLoginButton />
+  const headerRight = isMobileView ? (
+    <FeedFilterDropdown />
+  ) : (
+    <>
+      <FeedFilterDropdown />
+      <HiveLoginButton />
+    </>
+  )
 
   const headerLeft = (
     <button

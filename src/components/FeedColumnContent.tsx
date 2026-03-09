@@ -2,6 +2,7 @@
  * Single feed column: vertical scroll list of PostCards (no grid/masonry).
  */
 import { useAuthData } from '../stores/authStore'
+import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { PostCard } from './PostCard'
 import { FeedSkeleton } from './FeedSkeleton'
 import { EmptyState } from './EmptyState'
@@ -16,6 +17,7 @@ interface FeedColumnContentProps {
 
 export function FeedColumnContent({ feedType, showTitle = false }: FeedColumnContentProps) {
   const { isAuthenticated } = useAuthData()
+  const feedFilter = useFeedFilterStore((s) => s.feedFilter)
   const { posts, loading, error, hasMore, loadMore } = useFeedByType(feedType)
 
   return (
@@ -36,20 +38,33 @@ export function FeedColumnContent({ feedType, showTitle = false }: FeedColumnCon
         )}
         {loading && posts.length === 0 ? (
           [...Array(3)].map((_, i) => <FeedSkeleton key={i} />)
-        ) : posts.length === 0 ? (
+        ) : posts.length === 0 && !hasMore ? (
           <EmptyState
             title={`No ${FEED_LABELS[feedType].toLowerCase()} yet`}
             description="Pull to refresh or create one."
           />
         ) : (
           <>
-            {posts.map((post) => (
-              <PostCard
-                key={`${post.author}/${post.permlink}`}
-                post={post}
-                readOnly={!isAuthenticated}
+            {posts.length === 0 && hasMore ? (
+              <EmptyState
+                title={
+                  feedFilter === 'my_feed'
+                    ? 'No posts on this page'
+                    : feedFilter === 'following'
+                      ? 'No posts from followed users here'
+                      : `No ${FEED_LABELS[feedType].toLowerCase()} yet`
+                }
+                description="Load more to see more content."
               />
-            ))}
+            ) : (
+              posts.map((post) => (
+                <PostCard
+                  key={`${post.author}/${post.permlink}`}
+                  post={post}
+                  readOnly={!isAuthenticated}
+                />
+              ))
+            )}
             {hasMore && (
               <button
                 type="button"

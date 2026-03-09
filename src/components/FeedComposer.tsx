@@ -48,7 +48,6 @@ export function FeedComposer({
   parentPermlink,
   onSuccess,
   placeholder = 'Write in Markdown...',
-  authorMention,
   replyMode = false,
 }: FeedComposerProps) {
   const { isAuthenticated } = useAuthData()
@@ -107,18 +106,6 @@ export function FeedComposer({
     setTimeout(() => {
       el.focus()
       el.setSelectionRange(start + markdown.length, start + markdown.length)
-    }, 0)
-  }
-
-  const insertMention = () => {
-    const el = textareaRef.current
-    if (!el) return
-    const start = el.selectionStart
-    const mention = authorMention ? `@${authorMention} ` : '@'
-    setBody(body.slice(0, start) + mention + body.slice(start))
-    setTimeout(() => {
-      el.focus()
-      el.setSelectionRange(start + mention.length, start + mention.length)
     }, 0)
   }
 

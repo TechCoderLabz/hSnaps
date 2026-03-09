@@ -146,7 +146,38 @@ export function parsePostBody(post: NormalizedPost): ParsedPostBody {
     }
   }
 
-  const threeSpeakUrls = extract3SpeakUrls(body)
+  const threeSpeakFromBody = extract3SpeakUrls(body)
+  const threeSpeakFromMeta: Array<{ url: string; author: string; permlink: string }> = []
+
+  if (post.json_metadata && typeof post.json_metadata === 'string') {
+    try {
+      const meta = JSON.parse(post.json_metadata) as {
+        video?: { url?: string } | Record<string, unknown>
+      }
+      const videoUrl =
+        meta.video && typeof meta.video === 'object'
+          ? (meta.video as { url?: string }).url
+          : undefined
+      if (typeof videoUrl === 'string' && videoUrl.includes('3speak.tv')) {
+        const parsed = parse3SpeakUrl(videoUrl)
+        if (parsed) {
+          threeSpeakFromMeta.push({ url: videoUrl, ...parsed })
+        }
+      }
+    } catch {
+      // ignore malformed json_metadata
+    }
+  }
+
+  const threeSpeakUrls: Array<{ url: string; author: string; permlink: string }> = [
+    ...threeSpeakFromBody,
+  ]
+  for (const item of threeSpeakFromMeta) {
+    if (!threeSpeakUrls.some((x) => x.url === item.url)) {
+      threeSpeakUrls.push(item)
+    }
+  }
+
   const twitterStatusIds = extractTwitterIds(body)
   const youtubeVideoIds = extractYoutubeIds(body)
 
@@ -204,7 +235,6 @@ function splitTextByHashtags(text: string): Array<{ type: 'text'; value: string 
   const re = new RegExp(HASHTAG_REGEX.source, 'g')
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
-    const full = m[0]!
     const tag = m[1]!
     if (m.index > lastIndex) {
       out.push({ type: 'text', value: text.slice(lastIndex, m.index) })
@@ -244,8 +274,10 @@ export function plainTextToSegments(plainText: string): TextSegment[] {
   for (const seg of raw) {
     if (seg.type === 'link') {
       segments.push(seg)
-    } else {
+    } else if (seg.type === 'text') {
       segments.push(...splitTextByHashtags(seg.value))
+    } else {
+      segments.push(seg)
     }
   }
   return segments

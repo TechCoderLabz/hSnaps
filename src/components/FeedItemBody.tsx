@@ -2,14 +2,16 @@
  * Feed item body: plain text with clickable links and hashtags, plus media blocks.
  * Links open in new tab (or in-app on iOS). Hashtags navigate to /tags/:tag.
  */
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Play } from 'lucide-react'
 import type { NormalizedPost } from '../utils/types'
 import type { ParsedPostBody } from '../utils/postBody'
-import { parsePostBody, parseBodyFromMarkdown, plainTextToSegments } from '../utils/postBody'
+import { parsePostBody, plainTextToSegments } from '../utils/postBody'
 import { openLink } from '../utils/openLink'
 import { ImageCarousel } from './ImageCarousel'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
+import { useVideoPlaybackStore } from '../stores/videoPlaybackStore'
 
 function LinkSegment({ url }: { url: string }) {
   const handleClick = useCallback(
@@ -40,6 +42,104 @@ function HashtagSegment({ tag }: { tag: string }) {
     >
       #{tag}
     </Link>
+  )
+}
+
+function YoutubeEmbed({ id }: { id: string }) {
+  const [active, setActive] = useState(false)
+  const videoKey = `youtube:${id}`
+  const currentId = useVideoPlaybackStore((s) => s.currentId)
+  const setCurrentId = useVideoPlaybackStore((s) => s.setCurrentId)
+
+  useEffect(() => {
+    if (!active) return
+    if (currentId !== videoKey) {
+      setActive(false)
+    }
+  }, [active, currentId, videoKey])
+  const thumbUrl = `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+
+  if (!active) {
+    return (
+      <button
+        type="button"
+        className="my-3 flex w-full items-center justify-center overflow-hidden rounded-lg bg-black/60"
+        style={{ aspectRatio: '16/9' }}
+        onClick={() => {
+          setCurrentId(videoKey)
+          setActive(true)
+        }}
+      >
+        <div className="relative h-full w-full">
+          <img
+            src={thumbUrl}
+            alt="YouTube video thumbnail"
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black shadow-lg">
+              <Play className="ml-0.5 h-7 w-7" />
+            </div>
+          </div>
+        </div>
+      </button>
+    )
+  }
+
+  return (
+    <div className="my-3 overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
+      <iframe
+        src={`https://www.youtube.com/embed/${id}?autoplay=1&rel=0`}
+        title="YouTube video"
+        className="h-full w-full border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  )
+}
+
+function TwitterEmbed({ id }: { id: string }) {
+  const [active, setActive] = useState(false)
+  const videoKey = `twitter:${id}`
+  const currentId = useVideoPlaybackStore((s) => s.currentId)
+  const setCurrentId = useVideoPlaybackStore((s) => s.setCurrentId)
+
+  useEffect(() => {
+    if (!active) return
+    if (currentId !== videoKey) {
+      setActive(false)
+    }
+  }, [active, currentId, videoKey])
+
+  if (!active) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setCurrentId(videoKey)
+          setActive(true)
+        }}
+        className="my-3 flex w-full items-center justify-between rounded-lg border border-[#3a424a] bg-[#0f172a] px-4 py-3 text-left text-sm text-[#e5e7eb] hover:bg-[#111827]"
+      >
+        <div className="flex flex-col">
+          <span className="font-semibold text-[#f9fafb]">Load Tweet</span>
+          <span className="text-xs text-[#9ca3b0]">Tap to load the embedded tweet (saves data).</span>
+        </div>
+        <span className="text-xs font-medium text-[#60a5fa]">Show</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="my-3 overflow-hidden rounded-lg">
+      <iframe
+        src={`https://platform.twitter.com/embed/Tweet.html?id=${id}&theme=dark`}
+        title={`Tweet ${id}`}
+        className="w-full border-0"
+      />
+    </div>
   )
 }
 
@@ -103,27 +203,11 @@ export function ParsedBodyContent({
       ))}
 
       {parsed.twitterStatusIds.map((id) => (
-        <div key={id} className="my-3 overflow-hidden rounded-lg">
-          <iframe
-            src={`https://platform.twitter.com/embed/Tweet.html?id=${id}&theme=dark`}
-            title={`Tweet ${id}`}
-            className="h-[440px] w-full max-w-[550px] border-0"
-            loading="lazy"
-          />
-        </div>
+        <TwitterEmbed key={id} id={id} />
       ))}
 
       {parsed.youtubeVideoIds.map((id) => (
-        <div key={id} className="my-3 overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
-          <iframe
-            src={`https://www.youtube.com/embed/${id}`}
-            title="YouTube video"
-            className="h-full w-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            loading="lazy"
-          />
-        </div>
+        <YoutubeEmbed key={id} id={id} />
       ))}
     </div>
   )

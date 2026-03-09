@@ -47,7 +47,7 @@ export function FeedItemOptions({
     return () => document.removeEventListener('click', handleClickOutside)
   }, [menuOpen])
 
-  const handleReport = async (reason: string) => {
+  const handleReport = async () => {
     if (!token?.trim()) {
       toast.error('Please log in to report')
       setReportModalOpen(false)
