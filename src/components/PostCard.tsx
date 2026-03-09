@@ -288,6 +288,10 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     navigate(`/snap/${post.author}/${post.permlink}`, { state: { post } })
   }
 
+  const handleAuthorRoute = () => {
+    navigate(`/user/@${post.author}`)
+  }
+
   const actionBtnClass =
     'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8]'
 
@@ -295,17 +299,27 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     <article className="break-inside-avoid rounded-2xl border border-[#3a424a] bg-[#262b30] transition-colors duration-200 hover:border-[#e31337]/40">
       {/* Header: avatar + author + date + options */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-0">
-        <span className="shrink-0">
+        <button
+          type="button"
+          onClick={handleAuthorRoute}
+          className="shrink-0 rounded-full outline-none ring-0 focus-visible:ring-2 focus-visible:ring-[#e31337]/60"
+        >
           <img
             src={HIVE_AVATAR(post.author)}
             alt={post.author}
             onError={(e) => { e.currentTarget.src = HIVE_AVATAR('null') }}
             className="h-9 w-9 rounded-full border border-[#505863] object-cover"
           />
-        </span>
+        </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-[#ff8fa3]">@{post.author}</span>
+            <button
+              type="button"
+              onClick={handleAuthorRoute}
+              className="truncate text-left text-sm font-semibold text-[#ff8fa3] hover:underline"
+            >
+              @{post.author}
+            </button>
             <span className="shrink-0 text-xs text-[#9ca3b0]">{formatDate(post.created)}</span>
           </div>
         </div>

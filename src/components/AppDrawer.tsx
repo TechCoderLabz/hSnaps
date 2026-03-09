@@ -104,6 +104,12 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
 
         <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto py-2">
           {isMobileView && (
+            <div className="px-3 pb-3 mx-auto">
+              <HiveLoginButton />
+            </div>
+          )}
+
+          {isMobileView && (
             <div className="pb-2">
               <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wide text-[#9ca3b0]">
                 Feed
@@ -229,13 +235,6 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                       />
                       <span className="text-sm font-medium">Play Store</span>
                     </a>
-                  </div>
-                </li>
-              )}
-              {isMobileView && (
-                <li className="border-t border-[#3a424a] pt-2">
-                  <div className="px-4 py-2">
-                    <HiveLoginButton />
                   </div>
                 </li>
               )}

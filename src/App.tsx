@@ -3,6 +3,7 @@ import { Toaster } from 'sonner'
 import { AiohaProvider } from '@aioha/react-provider'
 import { initAioha } from '@aioha/aioha'
 import { AppRoutes } from './app/AppRoutes'
+import { AuthProvider } from './context/AuthContext'
 
 // Single Aioha instance configured similarly to the reference app
 const aioha = initAioha({
@@ -20,10 +21,12 @@ const aioha = initAioha({
 function App() {
   return (
     <AiohaProvider aioha={aioha}>
-      <HashRouter>
-        <AppRoutes />
-        <Toaster position="bottom-center" richColors closeButton />
-      </HashRouter>
+      <AuthProvider>
+        <HashRouter>
+          <AppRoutes />
+          <Toaster position="bottom-center" richColors closeButton />
+        </HashRouter>
+      </AuthProvider>
     </AiohaProvider>
   )
 }

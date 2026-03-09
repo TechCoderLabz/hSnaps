@@ -211,6 +211,20 @@ export async function getRebloggedBy(author: string, permlink: string): Promise<
   return Array.isArray(result) ? result : []
 }
 
+/** condenser_api.get_follow_count — returns follower and following counts for an account */
+export interface FollowCount {
+  follower_count: number
+  following_count: number
+}
+
+export async function getFollowCount(account: string): Promise<FollowCount> {
+  const result = await callCondenserApi<FollowCount>('get_follow_count', [account])
+  if (!result) {
+    return { follower_count: 0, following_count: 0 }
+  }
+  return result
+}
+
 /** condenser_api.get_following response item */
 export interface GetFollowingItem {
   follower: string
