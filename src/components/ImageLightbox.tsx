@@ -3,7 +3,7 @@
  * Uses original image URLs (no proxy). Border and rounded corners; arrows only when >1 image.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
 const SWIPE_THRESHOLD_PX = 50
 
@@ -15,6 +15,7 @@ export interface ImageLightboxProps {
 
 export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex)
+  const [imageLoading, setImageLoading] = useState(true)
   const touchStartX = useRef<number | null>(null)
   const touchSwipeHandled = useRef(false)
   const dragStartX = useRef<number | null>(null)
@@ -92,6 +93,10 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
   const total = imageUrls.length
   const showArrows = total > 1
 
+  useEffect(() => {
+    setImageLoading(true)
+  }, [current])
+
   return (
     <div
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4"
@@ -126,7 +131,7 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
 
         {/* Image area with swipe */}
         <div
-          className="flex min-h-0 flex-1 touch-pan-y items-center justify-center p-4"
+          className="relative flex min-h-0 flex-1 touch-pan-y items-center justify-center p-4"
           style={{ touchAction: 'pan-y' }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
@@ -139,15 +144,22 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
           onPointerCancel={onPointerUp}
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
+          {imageLoading && (
+            <div className="absolute inset-0 z-[5] flex items-center justify-center bg-[#1a1e22]">
+              <Loader2 className="h-12 w-12 animate-spin text-[#e31337]" aria-hidden />
+            </div>
+          )}
           <img
             src={current}
             alt={`Image ${index + 1} of ${total}`}
             className="max-h-full max-w-full select-none object-contain"
             draggable={false}
             onClick={(e) => e.stopPropagation()}
+            onLoad={() => setImageLoading(false)}
             onError={(e) => {
               const t = e.target as HTMLImageElement
               t.style.display = 'none'
+              setImageLoading(false)
             }}
           />
           {showArrows && (

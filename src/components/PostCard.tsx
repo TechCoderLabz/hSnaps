@@ -295,19 +295,14 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     <article className="break-inside-avoid rounded-2xl border border-[#3a424a] bg-[#262b30] transition-colors duration-200 hover:border-[#e31337]/40">
       {/* Header: avatar + author + date + options */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-0">
-        <a
-          href={`https://hive.blog/@${post.author}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0"
-        >
+        <span className="shrink-0">
           <img
             src={HIVE_AVATAR(post.author)}
             alt={post.author}
             onError={(e) => { e.currentTarget.src = HIVE_AVATAR('null') }}
             className="h-9 w-9 rounded-full border border-[#505863] object-cover"
           />
-        </a>
+        </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold text-[#ff8fa3]">@{post.author}</span>

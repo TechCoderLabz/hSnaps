@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand'
 import type { NormalizedPost } from '../utils/types'
-import { fetchFeedPage } from '../services/hiveService'
+import { fetchFeedPage, type FeedPageCursor } from '../services/hiveService'
 import type { FeedType } from '../utils/types'
 import { useAppAuthStore } from './authStore'
 
@@ -14,6 +14,7 @@ export interface FeedState {
   error: string | null
   hasMore: boolean
   page: number
+  nextCursor: FeedPageCursor | null
   fetchFeed: () => Promise<void>
   loadMore: () => Promise<void>
   reset: () => void
@@ -25,20 +26,22 @@ const initialState = {
   error: null as string | null,
   hasMore: true,
   page: 1,
+  nextCursor: null as FeedPageCursor | null,
 }
 
 export function createFeedStore(feedType: FeedType) {
   return create<FeedState>((set, get) => ({
     ...initialState,
     fetchFeed: async () => {
-      set({ loading: true, error: null, page: 1 })
+      set({ loading: true, error: null, page: 1, nextCursor: null })
       const observer = useAppAuthStore.getState().username ?? ''
       try {
-        const { posts, hasMore } = await fetchFeedPage(feedType, 1, observer)
+        const { posts, hasMore, nextCursor } = await fetchFeedPage(feedType, 1, observer, null)
         set({
           posts,
           hasMore,
           page: 1,
+          nextCursor,
           loading: false,
           error: null,
         })
@@ -50,21 +53,23 @@ export function createFeedStore(feedType: FeedType) {
       }
     },
     loadMore: async () => {
-      const { page, loading, hasMore } = get()
+      const { page, nextCursor, loading, hasMore } = get()
       if (loading || !hasMore) return
       set({ loading: true })
       const observer = useAppAuthStore.getState().username ?? ''
       const nextPage = page + 1
       try {
-        const { posts: newPosts, hasMore: more } = await fetchFeedPage(
+        const { posts: newPosts, hasMore: more, nextCursor: next } = await fetchFeedPage(
           feedType,
           nextPage,
-          observer
+          observer,
+          nextCursor
         )
         set((s) => ({
           posts: [...s.posts, ...newPosts],
           page: nextPage,
           hasMore: more,
+          nextCursor: next,
           loading: false,
         }))
       } catch (e) {

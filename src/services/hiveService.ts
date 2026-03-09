@@ -205,33 +205,52 @@ export async function getLatestContainer(
   return { author: c.author, permlink: c.permlink }
 }
 
-/**
- * Fetch one page of feed posts: get_account_posts → containers, then get_discussion for container → replies as posts.
- */
 /** condenser_api.get_reblogged_by — returns list of accounts who reblogged a post */
 export async function getRebloggedBy(author: string, permlink: string): Promise<string[]> {
   const result = await callCondenserApi<string[]>('get_reblogged_by', [author, permlink])
   return Array.isArray(result) ? result : []
 }
 
+/** Cursor for next page of containers (older posts). */
+export interface FeedPageCursor {
+  author: string
+  permlink: string
+}
+
+/**
+ * Fetch one page of feed posts: get_account_posts → containers, then get_discussion for container → replies as posts.
+ * Uses cursor (start_author/start_permlink) to fetch older containers on load more.
+ */
 export async function fetchFeedPage(
   feedType: FeedType,
-  page: number,
-  observer: string = ''
-): Promise<{ posts: NormalizedPost[]; hasMore: boolean }> {
+  _page: number,
+  observer: string = '',
+  cursor: FeedPageCursor | null = null
+): Promise<{ posts: NormalizedPost[]; hasMore: boolean; nextCursor: FeedPageCursor | null }> {
   const limit = 20
   const account = CONTAINER_ACCOUNTS[feedType]
-  const containers = await getAccountPosts(account, limit, null, null, observer)
-  const containerIndex = page - 1
-  if (containerIndex >= containers.length) {
-    return { posts: [], hasMore: false }
+  const containers = await getAccountPosts(
+    account,
+    limit,
+    cursor?.author ?? null,
+    cursor?.permlink ?? null,
+    observer
+  )
+  if (containers.length === 0) {
+    return { posts: [], hasMore: false, nextCursor: null }
   }
-  const container = containers[containerIndex]
+  const container = containers[0]
   const discussion = await getDiscussion(container.author, container.permlink, observer)
   const posts = discussionRepliesToPosts(discussion, container.author, container.permlink)
+  const lastContainer = containers[containers.length - 1]
+  const nextCursor: FeedPageCursor | null =
+    containers.length >= limit
+      ? { author: lastContainer.author, permlink: lastContainer.permlink }
+      : null
   return {
     posts,
-    hasMore: containerIndex + 1 < containers.length,
+    hasMore: nextCursor !== null,
+    nextCursor,
   }
 }
 

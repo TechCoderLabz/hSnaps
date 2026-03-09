@@ -124,18 +124,14 @@ export function LandingPage() {
             alt="hSnaps"
             className="mx-auto h-24 w-24 object-contain rounded-[5px] sm:h-32 sm:w-32"
           />
-          <p className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
             <span className="bg-gradient-to-r from-[#f0f0f8] via-[#e7e7f1] to-[#ff7a92] bg-clip-text text-transparent">
               hSnaps
             </span>
-          </p>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-            <span className="bg-gradient-to-r from-[#f0f0f8] via-[#e7e7f1] to-[#ff7a92] bg-clip-text text-transparent">
-              Share moments.
-            </span>
-            <br />
-            <span className="text-[#e7e7f1]">Earn rewards.</span>
           </h1>
+          <p className="mt-4 text-2xl font-semibold tracking-tight text-[#e7e7f1] sm:text-3xl">
+            Share moments. Earn rewards.
+          </p>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-[#c8cad6]">
             hSnaps brings social to the Hive blockchain. Share your moments, connect with others, and earn cryptocurrency rewards for your content.
           </p>

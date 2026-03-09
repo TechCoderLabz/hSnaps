@@ -9,9 +9,17 @@ import { parse3SpeakUrl } from './3speak'
 const TWITTER_STATUS_REGEX =
   /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^/]+\/status\/(\d+)/gi
 const YOUTUBE_REGEX =
-  /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&\s]+)|https?:\/\/youtu\.be\/([^?\s]+)/gi
+  /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&\s]+)|https?:\/\/youtu\.be\/([^?\s]+)|https?:\/\/(?:www\.)?youtube\.com\/shorts\/([^?\s]+)/gi
 const THREE_SPEAK_REGEX = /https?:\/\/(?:play\.)?3speak\.tv\/[^\s"'<>)]+/gi
 const ANY_URL_REGEX = /\bhttps?:\/\/[^\s<>)\]]+/gi
+
+/** Remove Liketu promo block: "---" + "For the best experience view this post on Liketu" */
+function stripLiketuPromo(body: string): string {
+  if (!body || typeof body !== 'string') return body
+  return body
+    .replace(/\n?---\s*\n\s*For the best experience view this post on Liketu\s*/gi, '')
+    .trim()
+}
 
 export interface ParsedPostBody {
   plainText: string
@@ -37,7 +45,7 @@ function extractYoutubeIds(text: string): string[] {
   let m: RegExpExecArray | null
   const re = new RegExp(YOUTUBE_REGEX.source, 'gi')
   while ((m = re.exec(text)) !== null) {
-    const id = m[1] ?? m[2]
+    const id = m[1] ?? m[2] ?? m[3]
     if (id && !ids.includes(id)) ids.push(id)
   }
   return ids
@@ -96,7 +104,7 @@ function stripMediaUrlsFromText(
   const twitterPattern = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/gi
   s = s.replace(twitterPattern, '')
   const youtubePattern =
-    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[^&\s]+|https?:\/\/youtu\.be\/[^?\s]+/gi
+    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[^&\s]+|https?:\/\/youtu\.be\/[^?\s]+|https?:\/\/(?:www\.)?youtube\.com\/shorts\/[^?\s]+/gi
   s = s.replace(youtubePattern, '')
   s = s.replace(/\n\s*\n\s*\n/g, '\n\n').trim()
   return s
@@ -126,7 +134,7 @@ function stripStandaloneImageUrlsFromText(text: string, imageUrls: string[]): st
 }
 
 export function parsePostBody(post: NormalizedPost): ParsedPostBody {
-  const body = post.body ?? ''
+  const body = stripLiketuPromo(post.body ?? '')
   const imageUrlsFromMetaAndMarkdown = getPostImageUrls(post)
   const standaloneImageUrls = extractStandaloneImageUrls(body)
   const seen = new Set(imageUrlsFromMetaAndMarkdown)

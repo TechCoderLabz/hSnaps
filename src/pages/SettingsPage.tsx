@@ -2,6 +2,7 @@
  * Settings: Support link, Vote Us, supporters, and other app settings.
  */
 import { ExternalLink } from 'lucide-react'
+import { APP_VERSION } from '../config/appVersion'
 import { SUPPORT_DISCORD_URL, VOTE_WITNESS_URL, SUPPORTERS } from '../constants/support'
 
 export function SettingsPage() {
@@ -12,6 +13,13 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-8">
       <h1 className="text-xl font-bold text-[#f0f0f8]">Settings</h1>
+
+      <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-[#f0f0f8]">App version</span>
+          <span className="text-[#9ca3b0] tabular-nums">v{APP_VERSION}</span>
+        </div>
+      </section>
 
       <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85">
         <a

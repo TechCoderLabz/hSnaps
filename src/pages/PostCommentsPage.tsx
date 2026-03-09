@@ -332,6 +332,7 @@ export function PostCommentsPage() {
                   depth={0}
                   onVotedRefresh={() => void fetchComments(true)}
                   onClickCommentUpvote={handleCommentUpvote}
+                  onReportedAuthor={() => void fetchComments(true)}
                 />
               ))}
             </div>

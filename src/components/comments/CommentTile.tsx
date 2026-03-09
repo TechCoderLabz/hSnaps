@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from 'react'
-import { ThumbsUp, MessageSquare, MoreHorizontal, Clock } from 'lucide-react'
+import { ThumbsUp, MessageSquare, Clock } from 'lucide-react'
 import { AddBookmarkButton } from '../AddBookmarkButton'
+import { FeedItemOptions } from '../FeedItemOptions'
 import { formatDistanceToNow } from 'date-fns'
 import type { Discussion } from '../../utils/commentTypes'
 import { parseBodyFromMarkdown } from '../../utils/postBody'
@@ -20,6 +21,8 @@ interface CommentTileProps {
   onClickCommentUpvote?: (author: string, permlink: string, percent: number) => void | Promise<void>
   onClickCommentReply?: (comment: Discussion) => void
   onClickUpvoteButton?: (currentUser?: string) => void
+  /** Called after reporting a comment author (e.g. to refetch comments). */
+  onReportedAuthor?: (username: string) => void
 }
 
 export function CommentTile({
@@ -33,6 +36,7 @@ export function CommentTile({
   onClickCommentUpvote,
   onClickCommentReply,
   onClickUpvoteButton,
+  onReportedAuthor,
 }: CommentTileProps) {
   const [isUpvoted, setIsUpvoted] = useState(false)
   const [showReplies, setShowReplies] = useState(true)
@@ -139,26 +143,35 @@ export function CommentTile({
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="text-sm font-semibold text-zinc-50 transition-colors duration-200 hover:text-[#e31337] md:text-base"
-              >
-                @{comment.author}
-              </button>
-              {comment.created && (
-                <div className="flex items-center space-x-1 text-xs text-zinc-400 md:text-sm">
-                  <Clock className="h-3 w-3 md:h-4 md:w-4" />
-                  <span>
-                    {formatDistanceToNow(new Date(`${comment.created}Z`), { addSuffix: true })}
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-zinc-50 transition-colors duration-200 hover:text-[#e31337] md:text-base"
+                >
+                  @{comment.author}
+                </button>
+                {comment.created && (
+                  <div className="flex items-center space-x-1 text-xs text-zinc-400 md:text-sm">
+                    <Clock className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>
+                      {formatDistanceToNow(new Date(`${comment.created}Z`), { addSuffix: true })}
+                    </span>
+                  </div>
+                )}
+                {comment.author === currentUser && (
+                  <span className="rounded-full bg-[#e31337]/10 px-2 py-1 text-xs text-[#ffb5c2]">
+                    You
                   </span>
-                </div>
-              )}
-              {comment.author === currentUser && (
-                <span className="rounded-full bg-[#e31337]/10 px-2 py-1 text-xs text-[#ffb5c2]">
-                  You
-                </span>
-              )}
+                )}
+              </div>
+              <FeedItemOptions
+                targetUsername={comment.author}
+                targetPermlink={comment.permlink}
+                onReportedAuthor={onReportedAuthor}
+                className="shrink-0"
+                ariaLabel="Comment options"
+              />
             </div>
 
             <div className="comment-content text-left text-zinc-50">
@@ -225,14 +238,6 @@ export function CommentTile({
                   {replies.length === 1 ? 'reply' : 'replies'}
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={() => onClickCommentReply?.(comment)}
-                className="opacity-0 transition-all duration-200 group-hover:opacity-100"
-              >
-                <MoreHorizontal className="h-4 w-4 text-zinc-500" />
-              </button>
             </div>
 
             {showVoteSlider && !hasAlreadyVoted && (
@@ -279,6 +284,7 @@ export function CommentTile({
               onClickCommentUpvote={onClickCommentUpvote}
               onClickCommentReply={onClickCommentReply}
               onClickUpvoteButton={onClickUpvoteButton}
+              onReportedAuthor={onReportedAuthor}
             />
           ))}
         </div>

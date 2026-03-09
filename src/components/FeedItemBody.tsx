@@ -107,7 +107,7 @@ export function ParsedBodyContent({
           <iframe
             src={`https://platform.twitter.com/embed/Tweet.html?id=${id}&theme=dark`}
             title={`Tweet ${id}`}
-            className="h-[400px] w-full max-w-[550px] border-0"
+            className="h-[440px] w-full max-w-[550px] border-0"
             loading="lazy"
           />
         </div>

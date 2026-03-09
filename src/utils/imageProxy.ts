@@ -9,7 +9,7 @@ const HIVE_IMAGE_PROXY_BASE = 'https://images.hive.blog'
  * Use this for feed item carousel images to reduce data usage.
  * For full-size preview (lightbox), use the original URL.
  */
-export function getHiveProxyThumbnailUrl(url: string, maxWidth = 250): string {
+export function getHiveProxyThumbnailUrl(url: string, maxWidth = 350): string {
   if (!url || typeof url !== 'string') return url
   const size = `${maxWidth}x0`
   return `${HIVE_IMAGE_PROXY_BASE}/${size}/${url}`
