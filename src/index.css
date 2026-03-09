@@ -145,6 +145,14 @@ body {
   max-height: 360px;
 }
 
+/* 3Speak iframe embed — override generic iframe sizing to fill container */
+.feed-item-body .three-speak-embed iframe,
+.markdown-preview .three-speak-embed iframe {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
 /* Prevent any child from overflowing the card */
 .markdown-preview {
   overflow: hidden;
