@@ -1,32 +1,43 @@
 /**
- * App routes: Landing, Login, Dashboard (with feed tabs).
- * Dashboard is open to guests (read-only); feeds hide composer and actions when not logged in.
+ * App routes: Landing, Login, Dashboard (with feed tabs), Bookmarks, Search User, Ignored, Settings.
  */
 import { Navigate, useRoutes } from 'react-router-dom'
 import { LandingPage } from '../pages/LandingPage'
 import { DashboardLayout } from '../layouts/DashboardLayout'
-import { SnapsFeed } from '../features/snaps/SnapsFeed'
-import { ThreadsFeed } from '../features/threads/ThreadsFeed'
-import { WavesFeed } from '../features/waves/WavesFeed'
-import { DbuzzFeed } from '../features/dbuzz/DbuzzFeed'
-import { MomentFeed } from '../features/moment/MomentFeed'
+import { UnifiedFeedPage } from '../features/feed/UnifiedFeedPage'
 import { PostCommentsPage } from '../pages/PostCommentsPage'
+import { TagFeedPage } from '../pages/TagFeedPage'
+import { BookmarksPage } from '../pages/BookmarksPage'
+import { PlaceholderPage } from '../pages/PlaceholderPage'
+import { IgnoredPage } from '../pages/IgnoredPage'
+import { SettingsPage } from '../pages/SettingsPage'
+import { PrivacyPage } from '../pages/PrivacyPage'
+import { Search } from 'lucide-react'
 
 export function AppRoutes() {
   const routes = useRoutes([
     { path: '/', element: <LandingPage /> },
-    { path: '/see-all-snaps', element: <Navigate to="/dashboard/snaps" replace /> },
+    { path: '/privacy', element: <PrivacyPage /> },
+    { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
+    { path: '/tags/:tag', element: <TagFeedPage /> },
+    {
+      path: '/snap/:author/:permlink',
+      element: <DashboardLayout />,
+      children: [{ index: true, element: <PostCommentsPage /> }],
+    },
     {
       path: '/dashboard',
       element: <DashboardLayout />,
       children: [
-        { index: true, element: <Navigate to="/dashboard/snaps" replace /> },
-        { path: 'snaps', element: <SnapsFeed /> },
-        { path: 'threads', element: <ThreadsFeed /> },
-        { path: 'waves', element: <WavesFeed /> },
-        { path: 'dbuzz', element: <DbuzzFeed /> },
-        { path: 'moments', element: <MomentFeed /> },
-        { path: 'post/:author/:permlink', element: <PostCommentsPage /> },
+        { index: true, element: <UnifiedFeedPage /> },
+        { path: 'bookmarks', element: <BookmarksPage /> },
+        { path: 'search-user', element: <PlaceholderPage title="Search User" icon={<Search className="h-12 w-12 text-[#9ca3b0]" />} /> },
+        { path: 'ignored', element: <IgnoredPage /> },
+        { path: 'settings', element: <SettingsPage /> },
+        { path: 'snaps', element: <Navigate to="/dashboard" replace /> },
+        { path: 'threads', element: <Navigate to="/dashboard" replace /> },
+        { path: 'waves', element: <Navigate to="/dashboard" replace /> },
+        { path: 'moments', element: <Navigate to="/dashboard" replace /> },
       ],
     },
     { path: '*', element: <Navigate to="/" replace /> },

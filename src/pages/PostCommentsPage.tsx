@@ -8,20 +8,17 @@ import type { NormalizedPost } from '../utils/types'
 import type { Discussion } from '../utils/commentTypes'
 import { getCommentsList } from '../services/commentService'
 import { getDiscussion, normalizeBridgePost } from '../services/hiveService'
-import { MarkdownPreview } from '../components/MarkdownPreview'
+import { contentHas3SpeakEmbed } from '../utils/3speak'
+import { FeedItemBody } from '../components/FeedItemBody'
+import { FeedItemOptions } from '../components/FeedItemOptions'
+import { AddBookmarkButton } from '../components/AddBookmarkButton'
 import { CommentSearchBar } from '../components/comments/CommentSearchBar'
-import { AddCommentInput } from '../components/comments/AddCommentInput'
 import { CommentTile } from '../components/comments/CommentTile'
-import { ReplyModal } from '../components/comments/ReplyModal'
+import { ReplyComposerModal } from '../components/comments/ReplyComposerModal'
 
 function convertPercentageToWeight(percentage: number): number {
   const clamped = Math.max(0, Math.min(100, percentage))
   return Math.round(clamped * 100)
-}
-
-function generateRandomPermlink(length = 8): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('')
 }
 
 export function PostCommentsPage() {
@@ -62,7 +59,8 @@ export function PostCommentsPage() {
   const fetchRootPost = useCallback(async () => {
     if (rootPost || !resolvedAuthor || !resolvedPermlink) return
     try {
-      const discussion = await getDiscussion(resolvedAuthor, resolvedPermlink)
+      const observer = username ?? ''
+      const discussion = await getDiscussion(resolvedAuthor, resolvedPermlink, observer)
       const key = Object.keys(discussion).find(
         (k) => discussion[k]?.author === resolvedAuthor && discussion[k]?.permlink === resolvedPermlink
       )
@@ -141,36 +139,15 @@ export function PostCommentsPage() {
     setReplyingTo({ author: parentAuthor, permlink: parentPermlink })
   }
 
-  const handleCommentSubmitted = async (
-    parentAuthor: string,
-    parentPermlink: string,
-    body: string
-  ) => {
-    if (!ensureCanAct()) return
-    if (!aioha || !username) return
-    try {
-      const permlinkValue = generateRandomPermlink()
-      const result = await aioha.comment(
-        parentAuthor,
-        parentPermlink,
-        permlinkValue,
-        `Re: ${parentAuthor}'s post`,
-        body,
-        JSON.stringify({ app: 'hsnaps/1.0.0', format: 'markdown' })
-      )
-      if (!result?.success) throw new Error(result?.error ?? 'Comment failed')
-      toast.success('Comment posted')
-      setShowAddComment(false)
-      setIsRefreshing(true)
-      setTimeout(async () => {
-        await fetchComments(true)
-        setIsRefreshing(false)
-      }, 3000)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to post comment'
-      toast.error(message)
-    }
-  }
+  const handleComposerSuccess = useCallback(() => {
+    setShowAddComment(false)
+    setReplyingTo(null)
+    setIsRefreshing(true)
+    setTimeout(() => {
+      void fetchComments(true)
+      setIsRefreshing(false)
+    }, 3000)
+  }, [fetchComments])
 
   const handleCommentUpvote = async (
     commentAuthor: string,
@@ -252,12 +229,31 @@ export function PostCommentsPage() {
                 <span className="font-medium text-[#ff8fa3]">@{rootPost.author}</span>
               </div>
               <div className="mt-2">
-                <MarkdownPreview
-                  content={rootPost.body}
-                  className="!border-0 !bg-transparent !p-0"
+                <FeedItemBody
+                  post={rootPost}
+                  hideImages={contentHas3SpeakEmbed(rootPost.body, rootPost.json_metadata)}
+                />
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <AddBookmarkButton
+                  author={rootPost.author}
+                  permlink={rootPost.permlink}
+                  title={rootPost.title}
+                  body={rootPost.body ?? ''}
+                  className="rounded-lg p-2 text-zinc-400 transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#e31337]"
+                  ariaLabel="Add to bookmarks"
                 />
               </div>
             </div>
+            <FeedItemOptions
+              targetUsername={rootPost.author}
+              targetPermlink={rootPost.permlink}
+              onReportedAuthor={(reported) => {
+                if (reported === rootPost.author) navigate('/dashboard')
+              }}
+              className="-mt-1"
+              ariaLabel="Post options"
+            />
           </div>
         </article>
       )}
@@ -302,17 +298,6 @@ export function PostCommentsPage() {
         />
 
         <div className="flex-1 overflow-y-auto">
-          {showAddComment && (
-            <div className="border-b border-[#3a424a]">
-              <AddCommentInput
-                onSubmit={(body) => handleCommentSubmitted(resolvedAuthor, resolvedPermlink, body)}
-                onCancel={() => setShowAddComment(false)}
-                currentUser={username || undefined}
-                placeholder="Add a comment..."
-              />
-            </div>
-          )}
-
           {topLevelComments.length === 0 ? (
             <div className="flex min-h-[200px] flex-col items-center justify-center p-8 text-center">
               <MessageCirclePlus className="mb-4 h-12 w-12 text-zinc-600" />
@@ -367,13 +352,24 @@ export function PostCommentsPage() {
         )}
       </div>
 
-      {replyingTo && (
-        <ReplyModal
-          parentAuthor={replyingTo.author}
-          parentPermlink={replyingTo.permlink}
-          onClose={() => setReplyingTo(null)}
-          onCommentSubmitted={handleCommentSubmitted}
-          currentUser={username || undefined}
+      {(showAddComment || replyingTo) && resolvedAuthor && resolvedPermlink && (
+        <ReplyComposerModal
+          isOpen
+          onClose={() => {
+            setShowAddComment(false)
+            setReplyingTo(null)
+          }}
+          onSuccess={handleComposerSuccess}
+          parentAuthor={replyingTo?.author ?? resolvedAuthor}
+          parentPermlink={replyingTo?.permlink ?? resolvedPermlink}
+          parentAvatarUrl={
+            replyingTo
+              ? `https://images.hive.blog/u/${replyingTo.author}/avatar`
+              : rootPost
+                ? `https://images.hive.blog/u/${rootPost.author}/avatar`
+                : undefined
+          }
+          placeholder={replyingTo ? `Reply to @${replyingTo.author}...` : 'Add a comment...'}
         />
       )}
     </section>

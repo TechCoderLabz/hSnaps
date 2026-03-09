@@ -7,12 +7,14 @@ import Masonry from 'react-masonry-css'
 import { useSnapsStore } from '../../stores/snapsStore'
 import { useAuthData } from '../../stores/authStore'
 import { useReputationStore, checkLowReputation } from '../../stores/reputationStore'
+import { useIgnoredAuthorsStore } from '../../stores/ignoredAuthorsStore'
 import { useViewStore } from '../../stores/viewStore'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { PostCard } from '../../components/PostCard'
 import { ComposeFab } from '../../components/ComposeFab'
 import { FeedSkeleton } from '../../components/FeedSkeleton'
 import { EmptyState } from '../../components/EmptyState'
+import { FEED_AVATARS } from '../../constants/feeds'
 
 const MASONRY_BP = { default: 5, 1919: 4, 1279: 3, 1023: 2, 639: 1 }
 
@@ -20,6 +22,7 @@ export function SnapsFeed() {
   const { isAuthenticated } = useAuthData()
   const { posts, loading, error, hasMore, fetchFeed, loadMore } = useSnapsStore()
   const repCache = useReputationStore((s) => s.cache)
+  const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
   const viewMode = useViewStore((s) => s.viewMode)
   const isDesktop = useIsDesktop()
   const useGrid = isDesktop && viewMode === 'grid'
@@ -30,7 +33,9 @@ export function SnapsFeed() {
     return () => { cancelled = true }
   }, [fetchFeed])
 
-  const filteredPosts = posts.filter((p) => !checkLowReputation(repCache, p.author))
+  const filteredPosts = posts.filter(
+    (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author)
+  )
 
   const renderItems = (items: React.ReactNode) =>
     useGrid ? (
@@ -44,7 +49,14 @@ export function SnapsFeed() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-zinc-100">Snaps</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-zinc-100">
+          <img
+            src={FEED_AVATARS.snaps}
+            alt=""
+            className="h-8 w-8 rounded-full object-cover ring-1 ring-[#3a424a]"
+          />
+          Snaps
+        </h1>
       </div>
       {isAuthenticated && (
         <ComposeFab feedType="snaps" placeholder="What's snapping?" />
@@ -62,7 +74,12 @@ export function SnapsFeed() {
         <>
           {renderItems(
             filteredPosts.map((post) => (
-              <PostCard key={`${post.author}/${post.permlink}`} post={post} readOnly={!isAuthenticated} />
+              <PostCard
+                key={`${post.author}/${post.permlink}`}
+                post={post}
+                readOnly={!isAuthenticated}
+                variant={useGrid ? 'grid' : 'list'}
+              />
             ))
           )}
           {hasMore && (

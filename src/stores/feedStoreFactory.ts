@@ -1,11 +1,10 @@
 /**
- * Feed stores (snaps, threads, waves, dbuzz, moments) using bridge APIs.
- * - Snaps/Threads/Waves/Moments: get_account_posts → get_discussion per container (replies = posts).
- * - DBuzz: get_ranked_posts with tag, paginated via nextStart.
+ * Feed stores (snaps, threads, waves, moments) using bridge APIs.
+ * get_account_posts → get_discussion per container (replies = posts).
  */
 import { create } from 'zustand'
 import type { NormalizedPost } from '../utils/types'
-import { fetchFeedPage, type FeedPageCursor } from '../services/hiveService'
+import { fetchFeedPage } from '../services/hiveService'
 import type { FeedType } from '../utils/types'
 import { useAppAuthStore } from './authStore'
 
@@ -15,8 +14,6 @@ export interface FeedState {
   error: string | null
   hasMore: boolean
   page: number
-  /** For DBuzz pagination (start_author/start_permlink) */
-  nextStart: FeedPageCursor | null
   fetchFeed: () => Promise<void>
   loadMore: () => Promise<void>
   reset: () => void
@@ -28,21 +25,19 @@ const initialState = {
   error: null as string | null,
   hasMore: true,
   page: 1,
-  nextStart: null as FeedPageCursor | null,
 }
 
 export function createFeedStore(feedType: FeedType) {
   return create<FeedState>((set, get) => ({
     ...initialState,
     fetchFeed: async () => {
-      set({ loading: true, error: null, page: 1, nextStart: null })
+      set({ loading: true, error: null, page: 1 })
       const observer = useAppAuthStore.getState().username ?? ''
       try {
-        const { posts, hasMore, nextStart } = await fetchFeedPage(feedType, 1, observer)
+        const { posts, hasMore } = await fetchFeedPage(feedType, 1, observer)
         set({
           posts,
           hasMore,
-          nextStart: nextStart ?? null,
           page: 1,
           loading: false,
           error: null,
@@ -55,24 +50,21 @@ export function createFeedStore(feedType: FeedType) {
       }
     },
     loadMore: async () => {
-      const { page, loading, hasMore, nextStart } = get()
+      const { page, loading, hasMore } = get()
       if (loading || !hasMore) return
       set({ loading: true })
       const observer = useAppAuthStore.getState().username ?? ''
       const nextPage = page + 1
-      const dbuzzStart = feedType === 'dbuzz' ? nextStart : undefined
       try {
-        const { posts: newPosts, hasMore: more, nextStart: next } = await fetchFeedPage(
+        const { posts: newPosts, hasMore: more } = await fetchFeedPage(
           feedType,
           nextPage,
-          observer,
-          dbuzzStart
+          observer
         )
         set((s) => ({
           posts: [...s.posts, ...newPosts],
           page: nextPage,
           hasMore: more,
-          nextStart: next ?? null,
           loading: false,
         }))
       } catch (e) {

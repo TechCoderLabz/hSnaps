@@ -2,7 +2,6 @@
  * Hive API service: bridge JSON-RPC (api.hive.blog) and PeakD public APIs.
  * - bridge.get_account_posts → container list (Snaps, Threads, Waves, Moments)
  * - bridge.get_discussion → replies inside a container (actual feed items)
- * - bridge.get_ranked_posts → DBuzz feed (tag hive-193084)
  */
 import type { NormalizedPost, FeedType } from '../utils/types'
 
@@ -111,33 +110,15 @@ export async function getAccountPosts(
 /** bridge.get_discussion — returns object keyed by "author/permlink", value = full post (incl. replies) */
 export async function getDiscussion(
   author: string,
-  permlink: string
+  permlink: string,
+  observer: string = ''
 ): Promise<Record<string, BridgePost>> {
   const result = await callHiveRpc<Record<string, BridgePost>>('bridge.get_discussion', {
     author,
     permlink,
-  })
-  return result ?? {}
-}
-
-/** bridge.get_ranked_posts — for DBuzz (tag-based feed) */
-export async function getRankedPosts(
-  tag: string,
-  sort: string,
-  limit: number,
-  startAuthor: string | null = null,
-  startPermlink: string | null = null,
-  observer: string = ''
-): Promise<BridgePost[]> {
-  const result = await callHiveRpc<BridgePost[]>('bridge.get_ranked_posts', {
-    tag,
-    sort,
-    limit,
-    start_author: startAuthor,
-    start_permlink: startPermlink,
     observer,
   })
-  return Array.isArray(result) ? result : []
+  return result ?? {}
 }
 
 /** Normalize bridge post to our NormalizedPost (handles both container and reply shape) */
@@ -205,37 +186,27 @@ export const CONTAINER_ACCOUNTS: Record<FeedType, string> = {
   snaps: 'peak.snaps',
   threads: 'leothreads',
   waves: 'ecency.waves',
-  dbuzz: 'dbuzz',
   moments: 'liketu.moments',
 }
 
-export const DBUZZ_TAG = 'hive-193084'
-
 /**
  * Returns the parent author + permlink to post into for a given feed type.
- * For container-based feeds (snaps/threads/waves/moments): fetches the latest
- * container post from the feed account. For DBuzz: returns the community tag.
+ * Fetches the latest container post from the feed account.
+ * Pass observer (logged-in username or '') for personalized results.
  */
-export async function getLatestContainer(feedType: FeedType): Promise<{ author: string; permlink: string }> {
-  if (feedType === 'dbuzz') {
-    return { author: '', permlink: DBUZZ_TAG }
-  }
+export async function getLatestContainer(
+  feedType: FeedType,
+  observer: string = ''
+): Promise<{ author: string; permlink: string }> {
   const account = CONTAINER_ACCOUNTS[feedType]
-  const containers = await getAccountPosts(account, 1)
+  const containers = await getAccountPosts(account, 1, null, null, observer)
   if (!containers.length) throw new Error(`No container found for ${feedType}`)
   const c = containers[0]
   return { author: c.author, permlink: c.permlink }
 }
 
-export interface FeedPageCursor {
-  author: string
-  permlink: string
-}
-
 /**
- * Fetch one page of feed posts.
- * - Snaps/Threads/Waves/Moments: get_account_posts → containers, then get_discussion for container at index (page-1) → replies as posts.
- * - DBuzz: get_ranked_posts with tag, paginated by start_author/start_permlink (pass dbuzzStart for page > 1).
+ * Fetch one page of feed posts: get_account_posts → containers, then get_discussion for container → replies as posts.
  */
 /** condenser_api.get_reblogged_by — returns list of accounts who reblogged a post */
 export async function getRebloggedBy(author: string, permlink: string): Promise<string[]> {
@@ -246,24 +217,9 @@ export async function getRebloggedBy(author: string, permlink: string): Promise<
 export async function fetchFeedPage(
   feedType: FeedType,
   page: number,
-  observer: string = '',
-  dbuzzStart?: FeedPageCursor | null
-): Promise<{ posts: NormalizedPost[]; hasMore: boolean; nextStart?: FeedPageCursor }> {
+  observer: string = ''
+): Promise<{ posts: NormalizedPost[]; hasMore: boolean }> {
   const limit = 20
-
-  if (feedType === 'dbuzz') {
-    const startAuthor = page > 1 && dbuzzStart ? dbuzzStart.author : null
-    const startPermlink = page > 1 && dbuzzStart ? dbuzzStart.permlink : null
-    const posts = await getRankedPosts(DBUZZ_TAG, 'created', limit, startAuthor, startPermlink, observer)
-    const normalized = posts.map(normalizeBridgePost)
-    const last = normalized[normalized.length - 1]
-    return {
-      posts: normalized,
-      hasMore: normalized.length >= limit,
-      nextStart: last ? { author: last.author, permlink: last.permlink } : undefined,
-    }
-  }
-
   const account = CONTAINER_ACCOUNTS[feedType]
   const containers = await getAccountPosts(account, limit, null, null, observer)
   const containerIndex = page - 1
@@ -271,7 +227,7 @@ export async function fetchFeedPage(
     return { posts: [], hasMore: false }
   }
   const container = containers[containerIndex]
-  const discussion = await getDiscussion(container.author, container.permlink)
+  const discussion = await getDiscussion(container.author, container.permlink, observer)
   const posts = discussionRepliesToPosts(discussion, container.author, container.permlink)
   return {
     posts,

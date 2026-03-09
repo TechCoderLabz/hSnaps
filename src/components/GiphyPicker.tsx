@@ -72,13 +72,13 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div
-        className="bg-slate-900 border border-slate-700 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col"
+        className="bg-[#262b30] border border-[#3a424a] rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
-          <h3 className="text-lg font-semibold text-white">Choose a GIF</h3>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-slate-800 rounded transition-colors">
-            <X className="h-5 w-5 text-slate-300" />
+        <div className="flex items-center justify-between p-4 border-b border-[#3a424a]">
+          <h3 className="text-lg font-semibold text-[#f0f0f8]">Choose a GIF</h3>
+          <button type="button" onClick={onClose} className="p-1 hover:bg-[#2f353d] rounded transition-colors text-[#9ca3b0]">
+            <X className="h-5 w-5" />
           </button>
         </div>
         <div className="p-4">
@@ -91,12 +91,12 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search for GIFs..."
                 inputMode={isMobile ? "text" : undefined}
-                className="flex-1 px-3 py-2 border border-slate-600 bg-slate-950 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-white placeholder-slate-400"
+                className="flex-1 px-3 py-2 border border-[#3a424a] bg-[#2f353d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e31337] text-[#f0f0f8] placeholder-[#9ca3b0]"
               />
               <button
                 type="submit"
                 disabled={isLoading || !searchTerm.trim()}
-                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-[#e31337] text-white rounded-lg hover:bg-[#c51231] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Search className="h-4 w-4" />
                 Search
@@ -106,8 +106,8 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
           {error && <div className="text-rose-400 text-sm mb-4">{error}</div>}
           {isLoading && (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-teal-500 border-t-transparent mx-auto" />
-              <p className="mt-2 text-slate-300">Searching for GIFs...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#e31337] border-t-transparent mx-auto" />
+              <p className="mt-2 text-[#9ca3b0]">Searching for GIFs...</p>
             </div>
           )}
           {gifs.length > 0 && (
@@ -117,7 +117,7 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
                   key={gif.id}
                   type="button"
                   onClick={() => handleGifSelect(gif)}
-                  className="relative group rounded-lg overflow-hidden hover:ring-2 hover:ring-teal-500 transition-all"
+                  className="relative group rounded-lg overflow-hidden hover:ring-2 hover:ring-[#e31337] transition-all"
                 >
                   <img
                     src={gif.images.fixed_height?.url || gif.images.downsized?.url || gif.images.original?.url}
@@ -131,7 +131,7 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="bg-black/90 rounded-full p-2">
-                      <Image className="h-4 w-4 text-teal-400" />
+                      <Image className="h-4 w-4 text-[#e31337]" />
                     </div>
                   </div>
                 </button>
@@ -139,7 +139,7 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
             </div>
           )}
           {!isLoading && gifs.length === 0 && searchTerm && (
-            <div className="text-center py-8 text-slate-400">No GIFs found for &quot;{searchTerm}&quot;</div>
+            <div className="text-center py-8 text-[#9ca3b0]">No GIFs found for &quot;{searchTerm}&quot;</div>
           )}
         </div>
       </div>

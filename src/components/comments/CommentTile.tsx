@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from 'react'
 import { ThumbsUp, MessageSquare, MoreHorizontal, Clock } from 'lucide-react'
-import { DefaultRenderer } from '@hiveio/content-renderer'
+import { AddBookmarkButton } from '../AddBookmarkButton'
 import { formatDistanceToNow } from 'date-fns'
 import type { Discussion } from '../../utils/commentTypes'
+import { parseBodyFromMarkdown } from '../../utils/postBody'
+import { contentHas3SpeakEmbed } from '../../utils/3speak'
 import { VoteSlider } from './VoteSlider'
+import { ParsedBodyContent } from '../FeedItemBody'
 
 interface CommentTileProps {
   comment: Discussion
@@ -68,12 +71,6 @@ export function CommentTile({
     setTimeout(() => setToastOpen(false), 2500)
   }
 
-  const highlightText = (text: string, query: string) => {
-    if (!query) return text
-    const regex = new RegExp(`(${query})`, 'gi')
-    return text.replace(regex, '<mark class="bg-yellow-300/40">$1</mark>')
-  }
-
   const handleOpenVote = () => {
     setShowVoteSlider(true)
   }
@@ -113,46 +110,11 @@ export function CommentTile({
     }
   }
 
-  const metadata =
-    (comment as unknown as { json_metadata_parsed?: any; json_metadata?: string }).json_metadata_parsed ||
-    (() => {
-      try {
-        return comment.json_metadata ? JSON.parse(comment.json_metadata) : undefined
-      } catch {
-        return undefined
-      }
-    })()
-
-  const rawBody = comment.body || ''
-  const sanitizeHashtagBlock = (text: string) => {
-    const pattern = /^(\s*(?:#[\p{L}\p{N}_-]+\s*(?:,\s*)?)+\s*)$/gimu
-    return text.replace(pattern, '').trim()
-  }
-  const sanitizedBody = sanitizeHashtagBlock(rawBody)
-
-  const displayBody = searchQuery ? highlightText(sanitizedBody, searchQuery) : sanitizedBody
-
-  const hasMarkdownImagesInBody =
-    /!\[[^\]]*\]\([^)]+\)/.test(sanitizedBody) || /<img\s/i.test(sanitizedBody)
-  const metadataImages: string[] = Array.isArray(metadata?.image) ? metadata.image : []
-
-  const hiveRenderer = new DefaultRenderer({
-    baseUrl: 'https://hive.blog/',
-    breaks: true,
-    skipSanitization: false,
-    allowInsecureScriptTags: false,
-    addNofollowToLinks: true,
-    doNotShowImages: false,
-    assetsWidth: 640,
-    assetsHeight: 480,
-    imageProxyFn: (url: string) => url,
-    usertagUrlFn: (account: string) => `/@${account}`,
-    hashtagUrlFn: (hashtag: string) => `/trending/${hashtag}`,
-    isLinkSafeFn: () => true,
-    addExternalCssClassToMatchingLinksFn: () => true,
-    ipfsPrefix: 'https://ipfs.io/ipfs/',
-  })
-
+  const parsedBody = useMemo(
+    () => parseBodyFromMarkdown(comment.body ?? '', comment.json_metadata),
+    [comment.body, comment.json_metadata]
+  )
+  const hideImages = contentHas3SpeakEmbed(comment.body ?? '', comment.json_metadata)
   const voteCount = comment.stats?.total_votes || comment.net_votes || 0
 
   return (
@@ -199,35 +161,13 @@ export function CommentTile({
               )}
             </div>
 
-            <div className="comment-content prose prose-sm max-w-none text-left text-zinc-50 prose-a:text-[#ffb5c2] prose-a:underline dark:prose-invert md:prose-base [&_*]:text-left">
-              {searchQuery ? (
-                <div
-                  className="text-left"
-                  // eslint-disable-next-line react/no-danger
-                  dangerouslySetInnerHTML={{ __html: displayBody }}
-                />
-              ) : (
-                <div
-                  className="text-left"
-                  // eslint-disable-next-line react/no-danger
-                  dangerouslySetInnerHTML={{ __html: hiveRenderer.render(sanitizedBody) }}
-                />
-              )}
+            <div className="comment-content text-left text-zinc-50">
+              <ParsedBodyContent
+                parsed={parsedBody}
+                hideImages={hideImages}
+                highlightQuery={searchQuery}
+              />
             </div>
-
-            {!hasMarkdownImagesInBody && metadataImages.length > 0 && (
-              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {metadataImages.map((src, idx) => (
-                  <img
-                    key={`${src}-${idx}`}
-                    src={src}
-                    alt={`image-${idx}`}
-                    className="h-auto max-w-full cursor-pointer rounded-lg shadow-sm transition-shadow duration-200 hover:shadow-md"
-                    onClick={() => window.open(src, '_blank')}
-                  />
-                ))}
-              </div>
-            )}
 
             <div className="mt-2 flex items-center space-x-4 md:space-x-6">
               <button
@@ -265,6 +205,15 @@ export function CommentTile({
                 <MessageSquare className="h-4 w-4" />
                 <span>Reply</span>
               </button>
+
+              <AddBookmarkButton
+                author={comment.author}
+                permlink={comment.permlink}
+                title={comment.title ?? ''}
+                body={comment.body ?? ''}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#e31337]"
+                ariaLabel="Add to bookmarks"
+              />
 
               {hasReplies && (
                 <button

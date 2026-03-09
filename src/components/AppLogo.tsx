@@ -7,7 +7,7 @@ export function AppLogo() {
 
   const handleClick = () => {
     if (isAuthenticated) {
-      navigate('/dashboard/snaps')
+      navigate('/dashboard')
     } else {
       navigate('/')
     }
@@ -23,7 +23,7 @@ export function AppLogo() {
       <img
         src="/logo.png"
         alt="hSnaps"
-        className="h-9 w-9 object-contain sm:h-10 sm:w-10"
+        className="h-9 w-9 object-contain rounded-[5px] sm:h-10 sm:w-10"
       />
     </button>
   )

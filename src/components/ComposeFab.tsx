@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { FeedType } from '../utils/types'
 import { getLatestContainer } from '../services/hiveService'
+import { useAuthData } from '../stores/authStore'
+
+function useObserver(): string {
+  const { username } = useAuthData()
+  return username ?? ''
+}
 import { useSnapsStore } from '../stores/snapsStore'
 import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
-import { useDbuzzStore } from '../stores/dbuzzStore'
 import { useMomentStore } from '../stores/momentStore'
 import { FeedComposer } from './FeedComposer'
 
@@ -12,7 +17,6 @@ const FEED_STORES: Record<FeedType, () => { fetchFeed: () => Promise<void> }> = 
   snaps: useSnapsStore,
   threads: useThreadsStore,
   waves: useWavesStore,
-  dbuzz: useDbuzzStore,
   moments: useMomentStore,
 }
 
@@ -22,12 +26,14 @@ interface ComposeFabProps {
   authorMention?: string
 }
 
-/** Floating action button that opens FeedComposer in a popup dialog. */
+/** Floating action button that opens FeedComposer in a popup dialog. Visible only when logged in. */
 export function ComposeFab({
   feedType,
   placeholder,
   authorMention,
 }: ComposeFabProps) {
+  const { isAuthenticated } = useAuthData()
+  const observer = useObserver()
   const { fetchFeed } = FEED_STORES[feedType]()
   const [open, setOpen] = useState(false)
   const [containerRef, setContainerRef] = useState<{ author: string; permlink: string } | null>(null)
@@ -38,11 +44,13 @@ export function ComposeFab({
     if (!open) return
     setRefLoading(true)
     setRefError(null)
-    getLatestContainer(feedType)
+    getLatestContainer(feedType, observer)
       .then(setContainerRef)
       .catch((e) => setRefError(e instanceof Error ? e.message : 'Failed to load container'))
       .finally(() => setRefLoading(false))
-  }, [open, feedType])
+  }, [open, feedType, observer])
+
+  if (!isAuthenticated) return null
 
   return (
     <>
@@ -76,10 +84,10 @@ export function ComposeFab({
             aria-hidden
           />
 
-          {/* Modal panel */}
-          <div className="relative z-10 w-full max-w-2xl animate-[slideUp_200ms_ease-out] sm:animate-[scaleIn_200ms_ease-out]">
+          {/* Modal panel — single panel, no line below header */}
+          <div className="relative z-10 w-full max-w-2xl animate-[slideUp_200ms_ease-out] sm:animate-[scaleIn_200ms_ease-out] rounded-2xl border border-[#3a424a] bg-[#262b30] overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between rounded-t-2xl border border-b-0 border-[#3a424a] bg-[#262b30] px-4 py-3 sm:rounded-t-2xl">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#262b30]">
               <h2 className="text-base font-semibold text-[#f0f0f8]">Create new post</h2>
               <button
                 type="button"
@@ -102,7 +110,7 @@ export function ComposeFab({
             </div>
 
             {/* Content area */}
-            <div className="rounded-b-2xl border border-t-0 border-[#3a424a] bg-[#262b30]">
+            <div className="bg-[#262b30]">
               {refLoading && (
                 <div className="flex items-center justify-center gap-3 px-4 py-10 text-sm text-[#9ca3b0]">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#e31337] border-t-transparent" />

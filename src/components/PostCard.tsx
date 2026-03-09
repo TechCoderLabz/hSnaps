@@ -9,13 +9,17 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { UpvoteListModal } from 'hive-react-kit'
 import { Heart, MessageCircle, Repeat2, Share2, Gift } from 'lucide-react'
-import { MarkdownPreview } from './MarkdownPreview'
+import { AddBookmarkButton } from './AddBookmarkButton'
+import { FeedItemOptions } from './FeedItemOptions'
+import { FeedItemBody } from './FeedItemBody'
 import { VoteSlider } from './comments/VoteSlider'
+import { contentHas3SpeakEmbed } from '../utils/3speak'
 import { getDiscussion } from '../services/hiveService'
 import type { NormalizedPost } from '../utils/types'
 import { useAuthData } from '../stores/authStore'
 import { useReblogStore } from '../stores/reblogStore'
 import { useReputationStore } from '../stores/reputationStore'
+import { isIOS } from '../utils/platform-detection'
 
 const HIVE_AVATAR = (username: string) =>
   `https://images.hive.blog/u/${username}/avatar`
@@ -121,7 +125,8 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
 
   const refreshVoteCount = async () => {
     try {
-      const discussion = await getDiscussion(post.author, post.permlink)
+      const observer = username ?? ''
+      const discussion = await getDiscussion(post.author, post.permlink, observer)
       const root = Object.values(discussion).find(
         (item) => item.author === post.author && item.permlink === post.permlink
       )
@@ -141,7 +146,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   const checkAlreadyVotedOnChain = async (): Promise<boolean> => {
     if (!username) return false
     try {
-      const discussion = await getDiscussion(post.author, post.permlink)
+      const discussion = await getDiscussion(post.author, post.permlink, username)
       const root = Object.values(discussion).find(
         (item) => item.author === post.author && item.permlink === post.permlink
       )
@@ -215,9 +220,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleShare = async () => {
-    const postUrl = post.url?.startsWith('http')
-      ? post.url
-      : `https://hive.blog${post.url || `/@${post.author}/${post.permlink}`}`
+    const postUrl = `${window.location.origin}/snap/${post.author}/${post.permlink}`
     try {
       if (navigator.share) {
         await navigator.share({ url: postUrl, title: `Post by @${post.author}` })
@@ -282,7 +285,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleCommentRoute = () => {
-    navigate(`/dashboard/post/${post.author}/${post.permlink}`, { state: { post } })
+    navigate(`/snap/${post.author}/${post.permlink}`, { state: { post } })
   }
 
   const actionBtnClass =
@@ -290,7 +293,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
 
   return (
     <article className="break-inside-avoid rounded-2xl border border-[#3a424a] bg-[#262b30] transition-colors duration-200 hover:border-[#e31337]/40">
-      {/* Header: avatar + author + date */}
+      {/* Header: avatar + author + date + options */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-0">
         <a
           href={`https://hive.blog/@${post.author}`}
@@ -311,11 +314,19 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
             <span className="shrink-0 text-xs text-[#9ca3b0]">{formatDate(post.created)}</span>
           </div>
         </div>
+        <FeedItemOptions
+          targetUsername={post.author}
+          targetPermlink={post.permlink}
+          ariaLabel="Post options"
+        />
       </div>
 
-      {/* Body */}
+      {/* Body: plain text + swipable images, 3speak, Twitter, YouTube */}
       <div className="px-4 pt-2 pb-1 overflow-hidden">
-        <MarkdownPreview content={post.body} className="!p-0 !border-0 !bg-transparent" />
+        <FeedItemBody
+          post={post}
+          hideImages={contentHas3SpeakEmbed(post.body, post.json_metadata)}
+        />
       </div>
 
       {/* Action bar */}
@@ -379,14 +390,25 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           <Share2 className="h-4 w-4" />
         </button>
 
-        <button
-          type="button"
-          onClick={handleOpenTipDialog}
+        <AddBookmarkButton
+          author={post.author}
+          permlink={post.permlink}
+          title={post.title}
+          body={post.body ?? ''}
           className={actionBtnClass}
-          aria-label="Tip"
-        >
-          <Gift className="h-4 w-4" />
-        </button>
+          ariaLabel="Add to bookmarks"
+        />
+
+        {!isIOS() && (
+          <button
+            type="button"
+            onClick={handleOpenTipDialog}
+            className={actionBtnClass}
+            aria-label="Tip"
+          >
+            <Gift className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {showUpvoteList && (
@@ -449,7 +471,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           </div>
         </div>
       )}
-      {showTipDialog && (
+      {showTipDialog && !isIOS() && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-md rounded-xl border border-[#3a424a] bg-[#262b30] p-5 shadow-2xl">
             <h3 className="text-lg font-semibold text-white">Send tip</h3>

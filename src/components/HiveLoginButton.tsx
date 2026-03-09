@@ -88,7 +88,7 @@ export const HiveLoginButton: React.FC = () => {
       setFromServerResponse(serverResponse)
 
       // Redirect to intended path or default dashboard (same pattern as reference)
-      const redirectPath = (location.state as { from?: string } | null)?.from ?? '/dashboard/snaps'
+      const redirectPath = (location.state as { from?: string } | null)?.from ?? '/dashboard'
       navigate(redirectPath)
 
       return serverResponse
@@ -117,6 +117,7 @@ export const HiveLoginButton: React.FC = () => {
       }}
       theme={theme}
       isActiveFieldVisible={true}
+      shouldShowSwitchUser={true}
       loginButtonColors={LOGIN_BUTTON_COLORS}
     />
   )

@@ -1,192 +1,120 @@
 /**
- * Dashboard layout: two views chosen by screen size (ternary).
- * - Desktop (≥ 1024px): sidebar tab switcher pinned to left edge.
- * - Mobile (< 1024px): bottom nav bar.
+ * Dashboard layout: drawer menu, header, main content.
+ * Safe area 20px top for native iOS/Android. Mobile: no feed switcher in app bar (use drawer). Load/refresh ignored authors on login and user switch.
  */
-import { useEffect } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutGrid, List } from 'lucide-react'
-import { useTrendingStore } from '../stores/trendingStore'
-import { useViewStore } from '../stores/viewStore'
-import { useIsDesktop } from '../hooks/useIsDesktop'
+import { useEffect, useRef, useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import { Menu } from 'lucide-react'
+import { useAuthStore as useHiveAuthStore } from 'hive-authentication'
 import { AppHeader } from '../components/AppHeader'
+import { AppDrawer } from '../components/AppDrawer'
 import { HiveLoginButton } from '../components/HiveLoginButton'
-import type { FeedType } from '../utils/types'
-
-const SIDEBAR_TABS: { id: FeedType; label: string; subLabel: string; path: string }[] = [
-  { id: 'snaps', label: 'Snaps', subLabel: 'BY @PEAKD', path: '/dashboard/snaps' },
-  { id: 'threads', label: 'Threads', subLabel: 'BY @INLEO', path: '/dashboard/threads' },
-  { id: 'waves', label: 'Waves', subLabel: 'BY @ECENCY', path: '/dashboard/waves' },
-  { id: 'dbuzz', label: 'DBuzz', subLabel: 'BY @DBUZZ', path: '/dashboard/dbuzz' },
-  { id: 'moments', label: 'Moments', subLabel: 'BY @LIKETU', path: '/dashboard/moments' },
-]
-
-const PATH_TO_FEED: Record<string, FeedType> = {
-  '/dashboard/snaps': 'snaps',
-  '/dashboard/threads': 'threads',
-  '/dashboard/waves': 'waves',
-  '/dashboard/dbuzz': 'dbuzz',
-  '/dashboard/moments': 'moments',
-}
+import { useFeedColumnCount } from '../hooks/useFeedColumnCount'
+import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
+import { isMobilePlatform } from '../utils/platform-detection'
+import { useAuthData } from '../stores/authStore'
 
 export function DashboardLayout() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const isDesktop = useIsDesktop()
-  const feedType = PATH_TO_FEED[location.pathname]
-  const { tags, authors, communities, loading, fetchTrending } = useTrendingStore()
+  const columns = useFeedColumnCount()
+  const isMobileView = columns === 1
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const isNative = isMobilePlatform()
+  const { token } = useAuthData()
+  const fetchIgnoredList = useIgnoredAuthorsStore((s) => s.fetchList)
+  const setIgnoredList = useIgnoredAuthorsStore((s) => s.setList)
+  const prevTokenRef = useRef<string | null>(null)
+  const previousUserRef = useRef<{ username: string } | null>(null)
 
   useEffect(() => {
-    if (feedType) void fetchTrending(feedType)
-  }, [feedType, fetchTrending])
+    if (token) {
+      fetchIgnoredList(token).catch(() => {})
+      prevTokenRef.current = token
+    } else {
+      setIgnoredList([])
+      prevTokenRef.current = null
+    }
+  }, [token, fetchIgnoredList, setIgnoredList])
 
-  return (
-    <div className="min-h-screen bg-[#212529] text-[#f0f0f8] flex flex-col">
-      <AppHeader
-        className="sticky top-0 z-20 h-14 border-b border-[#3a424a] bg-[#212529]/95 py-0 sm:px-6"
-        right={<HiveLoginButton />}
-      />
+  // Handle login/logout/switch user: refetch ignored list (from package example snippet)
+  useEffect(() => {
+    const unsubscribe = useHiveAuthStore.subscribe((state) => {
+      const currentUser = state.currentUser
+      const previousUser = previousUserRef.current
+      if (currentUser && !previousUser) {
+        // User logged in
+      } else if (!currentUser && previousUser) {
+        // User logged out
+        prevTokenRef.current = null
+        useIgnoredAuthorsStore.getState().setList([])
+      } else if (
+        currentUser &&
+        previousUser &&
+        currentUser.username !== previousUser.username
+      ) {
+        // User switched: refetch ignored list for the new user's token
+        try {
+          const parsed = JSON.parse(currentUser.serverResponse) as Record<string, string>
+          const currentToken = parsed?.token ?? null
+          if (currentToken) {
+            prevTokenRef.current = currentToken
+            useIgnoredAuthorsStore.getState().fetchList(currentToken).catch(() => {})
+          }
+        } catch {
+          // ignore
+        }
+      }
+      previousUserRef.current = currentUser ? { username: currentUser.username } : null
 
-      {isDesktop ? (
-        <DesktopView
-          location={location}
-          navigate={navigate}
-          feedType={feedType}
-          tags={tags}
-          authors={authors}
-          communities={communities}
-          loading={loading}
-        />
-      ) : (
-        <MobileView location={location} navigate={navigate} />
-      )}
-    </div>
+      const currentToken = currentUser?.serverResponse
+        ? (() => {
+            try {
+              const parsed = JSON.parse(currentUser.serverResponse) as Record<string, string>
+              return parsed.token ?? null
+            } catch {
+              return null
+            }
+          })()
+        : null
+      if (currentToken && currentToken !== prevTokenRef.current) {
+        prevTokenRef.current = currentToken
+        useIgnoredAuthorsStore.getState().fetchList(currentToken).catch(() => {})
+      }
+    })
+    return unsubscribe
+  }, [])
+
+  const headerRight = isMobileView ? <></> : <HiveLoginButton />
+
+  const headerLeft = (
+    <button
+      type="button"
+      onClick={() => setDrawerOpen(true)}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#9ca3b0] hover:bg-[#2f353d] hover:text-[#f0f0f8]"
+      aria-label="Open menu"
+    >
+      <Menu className="h-5 w-5" />
+    </button>
   )
-}
-
-/** Desktop view: sidebar pinned to left edge + main content that fills remaining width. */
-function DesktopView({
-  location,
-  navigate,
-}: {
-  location: ReturnType<typeof useLocation>
-  navigate: ReturnType<typeof useNavigate>
-  feedType: FeedType | undefined
-  tags: { tag: string; posts: number }[]
-  authors: { author: string; posts: number }[]
-  communities: { tag: string; posts: number }[]
-  loading: boolean
-}) {
-  const { viewMode, toggleViewMode } = useViewStore()
 
   return (
-    <div className="flex w-full flex-1">
-      {/* Sidebar pinned to left edge */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-[#3a424a] bg-[#1a1e23]">
-        <nav className="sticky top-14 flex flex-col gap-1.5 p-3">
-          {SIDEBAR_TABS.map((tab) => {
-            const isActive = location.pathname === tab.path
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => navigate(tab.path)}
-                className={`relative rounded-lg border px-4 py-3 text-left transition-colors duration-200 ${isActive
-                    ? 'border-[#e31337] bg-[#e31337]/15 text-[#f0f0f8] shadow-[0_0_0_1px_rgba(227,19,55,0.45)]'
-                    : 'border-[#2d333b] bg-[#22272e] text-[#e7e7f1] hover:border-[#454c56] hover:bg-[#2d333b]'
-                  }`}
-              >
-                {isActive && (
-                  <span
-                    className="absolute right-3 top-1/2 -translate-y-1/2 h-0 w-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-[#e31337]"
-                    aria-hidden
-                  />
-                )}
-                <div className="text-lg font-bold uppercase tracking-tight pr-5">
-                  {tab.label}
-                </div>
-                <div className={`mt-0.5 text-[10px] uppercase tracking-wider ${isActive ? 'text-[#ffd0d9]' : 'text-[#8b949e]'}`}>
-                  {tab.subLabel}
-                </div>
-              </button>
-            )
-          })}
-
-          {/* View mode toggle */}
-          <div className="mt-4 border-t border-[#3a424a] pt-3">
-            <div className="flex items-center gap-1 rounded-lg border border-[#2d333b] bg-[#22272e] p-1">
-              <button
-                type="button"
-                onClick={() => viewMode !== 'grid' && toggleViewMode()}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors duration-200 ${viewMode === 'grid'
-                    ? 'bg-[#e31337]/15 text-[#f0f0f8]'
-                    : 'text-[#8b949e] hover:text-[#c8cad6]'
-                  }`}
-                aria-label="Grid view"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Grid
-              </button>
-              <button
-                type="button"
-                onClick={() => viewMode !== 'list' && toggleViewMode()}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors duration-200 ${viewMode === 'list'
-                    ? 'bg-[#e31337]/15 text-[#f0f0f8]'
-                    : 'text-[#8b949e] hover:text-[#c8cad6]'
-                  }`}
-                aria-label="List view"
-              >
-                <List className="h-3.5 w-3.5" />
-                List
-              </button>
-            </div>
-          </div>
-        </nav>
-      </aside>
-
-      {/* Main content fills remaining width */}
-      <main className="flex-1 overflow-auto p-6">
-        <div className="w-full">
+    <div
+      className={`flex min-h-screen flex-col bg-[#212529] text-[#f0f0f8] ${isNative ? 'pt-[20px]' : ''}`}
+    >
+      <AppHeader
+        left={headerLeft}
+        right={headerRight}
+        className="sticky top-0 z-20 h-14 border-b border-[#3a424a] bg-[#212529]/95 py-0 sm:px-6"
+      />
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
+        <div className="h-full min-h-0">
           <Outlet />
         </div>
       </main>
+      <AppDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        isMobileView={isMobileView}
+      />
     </div>
-  )
-}
-
-/** Mobile view: main content + fixed bottom nav bar. No sidebar. */
-function MobileView({
-  location,
-  navigate,
-}: {
-  location: ReturnType<typeof useLocation>
-  navigate: ReturnType<typeof useNavigate>
-}) {
-  return (
-    <>
-      <div className="mx-auto flex w-full max-w-[1280px] flex-1">
-        <main className="flex-1 overflow-auto p-4 pb-24">
-          <Outlet />
-        </main>
-      </div>
-      <nav className="fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around border-t border-[#3a424a] bg-[#212529]/95 py-2 backdrop-blur">
-        {SIDEBAR_TABS.map((tab) => {
-          const isActive = location.pathname === tab.path
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-2 text-xs border-t-2 ${isActive
-                  ? 'text-[#e31337] border-[#e31337]'
-                  : 'text-[#9ca3b0] border-transparent'
-                }`}
-            >
-              <span className="font-medium">{tab.label}</span>
-            </button>
-          )
-        })}
-      </nav>
-    </>
   )
 }

@@ -20,13 +20,14 @@ interface FeedComposerProps {
   onSuccess?: () => void
   placeholder?: string
   authorMention?: string
+  /** When true, use comment metadata (no tags, hsnaps app) and 2000 char limit. */
+  replyMode?: boolean
 }
 
 const FEED_METADATA: Record<FeedType, { tags: string[]; app: string }> = {
   snaps:   { tags: ['snaps'],                  app: 'peakd/2026.2.6'     },
   threads: { tags: ['leofinance'],             app: 'leothreads/1.0.0'   },
   waves:   { tags: ['ecency'],                 app: 'ecency/3.0.0'       },
-  dbuzz:   { tags: ['hive-193084', 'dbuzz'],   app: 'dbuzz/1.0.0'        },
   moments:  { tags: ['liketu'],                 app: 'liketu/1.0.0'       },
 }
 
@@ -39,6 +40,8 @@ const EMOJIS = [
   '🖖', '👋', '🤝', '👏', '🙌', '👐', '🤲', '🤜', '🤛', '✊', '👊',
 ]
 
+const REPLY_CHAR_LIMIT = 2000
+
 export function FeedComposer({
   feedType,
   parentAuthor,
@@ -46,13 +49,14 @@ export function FeedComposer({
   onSuccess,
   placeholder = 'Write in Markdown...',
   authorMention,
+  replyMode = false,
 }: FeedComposerProps) {
   const { isAuthenticated } = useAuthData()
   const renderHive = useMarkdownRenderer()
   const { comment } = useHiveOperations()
   if (!isAuthenticated) return null
 
-  const limit = FEED_CHAR_LIMITS[feedType]
+  const limit = replyMode ? REPLY_CHAR_LIMIT : FEED_CHAR_LIMITS[feedType]
   const [body, setBody] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const [isGiphyOpen, setIsGiphyOpen] = useState(false)
@@ -135,7 +139,9 @@ export function FeedComposer({
     if (body.length > limit || isSubmitting) return
     setIsSubmitting(true)
     try {
-      const meta = FEED_METADATA[feedType]
+      const meta = replyMode
+        ? { tags: [] as string[], app: 'hsnaps/1.0.0' }
+        : FEED_METADATA[feedType]
       const jsonMetadata = JSON.stringify({ tags: meta.tags, app: meta.app, format: 'markdown' })
       await comment(parentAuthor, parentPermlink, body.trim(), '', jsonMetadata)
       toast.success('Posted successfully!')
@@ -177,9 +183,6 @@ export function FeedComposer({
             🔗
           </button>
           <ImageUploader onImageUploaded={insertImage} disabled={isSubmitting} />
-          <button type="button" onClick={insertMention} className="p-2 rounded-lg hover:bg-[#2f353d] text-[#c8cad6] text-sm" title="Mention">
-            @
-          </button>
           <button type="button" onClick={() => setIsEmojiOpen(true)} className="p-2 rounded-lg hover:bg-[#2f353d] text-[#c8cad6] text-sm" title="Emoji">
             😀
           </button>
@@ -192,7 +195,7 @@ export function FeedComposer({
           <div className="mb-3 rounded-xl border border-[#3a424a] bg-[#2f353d] overflow-hidden">
             <div className="px-3 py-2 text-xs uppercase tracking-wide text-[#9ca3b0] bg-[#272d34]">Preview</div>
             <div
-              className="px-3 m-2 py-2 prose prose-invert prose-zinc max-w-none !p-0 !border-0 !bg-transparent text-sm markdown-preview break-words [&_img]:max-w-full [&_a]:text-amber-400 [&_a]:underline"
+              className="px-3 m-2 py-2 prose prose-invert prose-zinc max-w-none !p-0 !border-0 !bg-transparent text-sm markdown-preview break-words [&_img]:max-w-full [&_a]:text-[#e31337] [&_a]:underline"
               // eslint-disable-next-line react/no-danger -- View only: Hive renderer output (@hiveio/content-renderer)
               dangerouslySetInnerHTML={{ __html: renderHive(body) }}
             />
