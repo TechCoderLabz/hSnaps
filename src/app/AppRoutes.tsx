@@ -12,6 +12,7 @@ import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { IgnoredPage } from '../pages/IgnoredPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
+import { UserProfilePage } from '../pages/UserProfilePage'
 import { Search } from 'lucide-react'
 
 export function AppRoutes() {
@@ -20,6 +21,7 @@ export function AppRoutes() {
     { path: '/privacy', element: <PrivacyPage /> },
     { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
     { path: '/tags/:tag', element: <TagFeedPage /> },
+    { path: '/user/:username', element: <UserProfilePage /> },
     {
       path: '/snap/:author/:permlink',
       element: <DashboardLayout />,
