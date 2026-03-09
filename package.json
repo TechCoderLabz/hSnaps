@@ -1,10 +1,10 @@
 {
   "name": "hive-snaps-reactjs",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "deployment": {
     "branch": "feature/massive-changes",
-    "commitHash": "5486998"
+    "commitHash": "d89eee4"
   },
   "type": "module",
   "scripts": {
