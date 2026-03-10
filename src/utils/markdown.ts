@@ -1,3 +1,73 @@
+/** Escape HTML for safe use in attributes and text. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Trim markdown to plain text + links only (no images, no formatting, no raw URLs/HTML).
+ * Returns HTML safe to render: paragraphs and <a> tags only.
+ */
+export function markdownToTrimmedHtml(markdown: string): string {
+  if (!markdown || typeof markdown !== 'string') return ''
+
+  let s = markdown
+  // Normalize line endings so newlines are preserved correctly
+  s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+  // Remove image syntax entirely
+  s = s.replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+
+  // Replace link [text](url) with <a> (link text kept, URL in href)
+  s = s.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_, text: string, url: string) => {
+    const href = url.trim().replace(/^["']|["']$/g, '')
+    const label = escapeHtml((text || href).trim())
+    return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="text-[#e31337] underline">${label}</a>`
+  })
+
+  // Remove bold/italic: keep inner text only
+  s = s.replace(/\*\*([^*]+)\*\*/g, '$1')
+  s = s.replace(/__([^_]+)__/g, '$1')
+  s = s.replace(/\*([^*]+)\*/g, '$1')
+  s = s.replace(/_([^_]+)_/g, '$1')
+  s = s.replace(/~~([^~]+)~~/g, '$1')
+  s = s.replace(/`([^`]+)`/g, '$1')
+
+  // Remove header markers
+  s = s.replace(/^#+\s+/gm, '')
+
+  // Remove remaining HTML tags
+  s = s.replace(/<[^>]+>/g, '')
+
+  // Remove bare URLs except 3speak.tv (so 3speak can be turned into the embed player)
+  s = s.replace(/\bhttps?:\/\/[^\s<>)\]]+/gi, (url) =>
+    url.includes('3speak.tv') ? url : ''
+  )
+
+  // Preserve newlines: only collapse spaces within each line, trim lines
+  s = s
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .join('\n')
+    .trim()
+
+  if (!s) return ''
+
+  // Split by one or more blank lines = paragraph boundaries; single \n = line break within paragraph
+  const paragraphClass = 'text-sm text-zinc-300 leading-relaxed break-words whitespace-normal'
+  const paragraphs = s
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  return paragraphs
+    .map((p) => `<p class="${paragraphClass}">${p.replace(/\n/g, '<br />')}</p>`)
+    .join('')
+}
+
 // Simple markdown to HTML converter for basic markdown features
 export function markdownToHtml(markdown: string): string {
   if (!markdown) return '';

@@ -107,7 +107,14 @@ body {
   object-fit: contain;
 }
 
-/* Constrain iframes (YouTube, X.com embeds, etc.) */
+/* Grid card: fixed height for media (carousel) so 1 vs N images doesn’t change card height */
+.post-card-grid-media {
+  height: 288px; /* 260 image + 28 pager row */
+  min-height: 288px;
+}
+
+/* Constrain iframes (YouTube, Twitter, etc.) in feed body */
+.feed-item-body iframe,
 .markdown-preview iframe {
   display: block;
   max-width: 100%;
@@ -128,6 +135,22 @@ body {
   height: auto;
   margin: 0.5rem 0;
   border-radius: 0.75rem;
+}
+
+/* 3Speak player (replaces 3speak.tv links) */
+.3speak-player-wrapper {
+  margin: 0.5rem 0;
+}
+.3speak-player-wrapper video {
+  max-height: 360px;
+}
+
+/* 3Speak iframe embed — override generic iframe sizing to fill container */
+.feed-item-body .three-speak-embed iframe,
+.markdown-preview .three-speak-embed iframe {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
 }
 
 /* Prevent any child from overflowing the card */

@@ -1,10 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from 'react'
-import { ThumbsUp, MessageSquare, MoreHorizontal, Clock } from 'lucide-react'
-import { DefaultRenderer } from '@hiveio/content-renderer'
+import { ThumbsUp, MessageSquare, Clock } from 'lucide-react'
+import { AddBookmarkButton } from '../AddBookmarkButton'
+import { FeedItemOptions } from '../FeedItemOptions'
 import { formatDistanceToNow } from 'date-fns'
 import type { Discussion } from '../../utils/commentTypes'
+import { parseBodyFromMarkdown } from '../../utils/postBody'
+import { contentHas3SpeakEmbed } from '../../utils/3speak'
 import { VoteSlider } from './VoteSlider'
+import { ParsedBodyContent } from '../FeedItemBody'
 
 interface CommentTileProps {
   comment: Discussion
@@ -17,6 +21,8 @@ interface CommentTileProps {
   onClickCommentUpvote?: (author: string, permlink: string, percent: number) => void | Promise<void>
   onClickCommentReply?: (comment: Discussion) => void
   onClickUpvoteButton?: (currentUser?: string) => void
+  /** Called after reporting a comment author (e.g. to refetch comments). */
+  onReportedAuthor?: (username: string) => void
 }
 
 export function CommentTile({
@@ -30,6 +36,7 @@ export function CommentTile({
   onClickCommentUpvote,
   onClickCommentReply,
   onClickUpvoteButton,
+  onReportedAuthor,
 }: CommentTileProps) {
   const [isUpvoted, setIsUpvoted] = useState(false)
   const [showReplies, setShowReplies] = useState(true)
@@ -66,12 +73,6 @@ export function CommentTile({
     setToastMessage(message)
     setToastOpen(true)
     setTimeout(() => setToastOpen(false), 2500)
-  }
-
-  const highlightText = (text: string, query: string) => {
-    if (!query) return text
-    const regex = new RegExp(`(${query})`, 'gi')
-    return text.replace(regex, '<mark class="bg-yellow-300/40">$1</mark>')
   }
 
   const handleOpenVote = () => {
@@ -113,46 +114,11 @@ export function CommentTile({
     }
   }
 
-  const metadata =
-    (comment as unknown as { json_metadata_parsed?: any; json_metadata?: string }).json_metadata_parsed ||
-    (() => {
-      try {
-        return comment.json_metadata ? JSON.parse(comment.json_metadata) : undefined
-      } catch {
-        return undefined
-      }
-    })()
-
-  const rawBody = comment.body || ''
-  const sanitizeHashtagBlock = (text: string) => {
-    const pattern = /^(\s*(?:#[\p{L}\p{N}_-]+\s*(?:,\s*)?)+\s*)$/gimu
-    return text.replace(pattern, '').trim()
-  }
-  const sanitizedBody = sanitizeHashtagBlock(rawBody)
-
-  const displayBody = searchQuery ? highlightText(sanitizedBody, searchQuery) : sanitizedBody
-
-  const hasMarkdownImagesInBody =
-    /!\[[^\]]*\]\([^)]+\)/.test(sanitizedBody) || /<img\s/i.test(sanitizedBody)
-  const metadataImages: string[] = Array.isArray(metadata?.image) ? metadata.image : []
-
-  const hiveRenderer = new DefaultRenderer({
-    baseUrl: 'https://hive.blog/',
-    breaks: true,
-    skipSanitization: false,
-    allowInsecureScriptTags: false,
-    addNofollowToLinks: true,
-    doNotShowImages: false,
-    assetsWidth: 640,
-    assetsHeight: 480,
-    imageProxyFn: (url: string) => url,
-    usertagUrlFn: (account: string) => `/@${account}`,
-    hashtagUrlFn: (hashtag: string) => `/trending/${hashtag}`,
-    isLinkSafeFn: () => true,
-    addExternalCssClassToMatchingLinksFn: () => true,
-    ipfsPrefix: 'https://ipfs.io/ipfs/',
-  })
-
+  const parsedBody = useMemo(
+    () => parseBodyFromMarkdown(comment.body ?? '', comment.json_metadata),
+    [comment.body, comment.json_metadata]
+  )
+  const hideImages = contentHas3SpeakEmbed(comment.body ?? '', comment.json_metadata)
   const voteCount = comment.stats?.total_votes || comment.net_votes || 0
 
   return (
@@ -177,57 +143,44 @@ export function CommentTile({
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="text-sm font-semibold text-zinc-50 transition-colors duration-200 hover:text-[#e31337] md:text-base"
-              >
-                @{comment.author}
-              </button>
-              {comment.created && (
-                <div className="flex items-center space-x-1 text-xs text-zinc-400 md:text-sm">
-                  <Clock className="h-3 w-3 md:h-4 md:w-4" />
-                  <span>
-                    {formatDistanceToNow(new Date(`${comment.created}Z`), { addSuffix: true })}
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-zinc-50 transition-colors duration-200 hover:text-[#e31337] md:text-base"
+                >
+                  @{comment.author}
+                </button>
+                {comment.created && (
+                  <div className="flex items-center space-x-1 text-xs text-zinc-400 md:text-sm">
+                    <Clock className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>
+                      {formatDistanceToNow(new Date(`${comment.created}Z`), { addSuffix: true })}
+                    </span>
+                  </div>
+                )}
+                {comment.author === currentUser && (
+                  <span className="rounded-full bg-[#e31337]/10 px-2 py-1 text-xs text-[#ffb5c2]">
+                    You
                   </span>
-                </div>
-              )}
-              {comment.author === currentUser && (
-                <span className="rounded-full bg-[#e31337]/10 px-2 py-1 text-xs text-[#ffb5c2]">
-                  You
-                </span>
-              )}
-            </div>
-
-            <div className="comment-content prose prose-sm max-w-none text-left text-zinc-50 prose-a:text-[#ffb5c2] prose-a:underline dark:prose-invert md:prose-base [&_*]:text-left">
-              {searchQuery ? (
-                <div
-                  className="text-left"
-                  // eslint-disable-next-line react/no-danger
-                  dangerouslySetInnerHTML={{ __html: displayBody }}
-                />
-              ) : (
-                <div
-                  className="text-left"
-                  // eslint-disable-next-line react/no-danger
-                  dangerouslySetInnerHTML={{ __html: hiveRenderer.render(sanitizedBody) }}
-                />
-              )}
-            </div>
-
-            {!hasMarkdownImagesInBody && metadataImages.length > 0 && (
-              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {metadataImages.map((src, idx) => (
-                  <img
-                    key={`${src}-${idx}`}
-                    src={src}
-                    alt={`image-${idx}`}
-                    className="h-auto max-w-full cursor-pointer rounded-lg shadow-sm transition-shadow duration-200 hover:shadow-md"
-                    onClick={() => window.open(src, '_blank')}
-                  />
-                ))}
+                )}
               </div>
-            )}
+              <FeedItemOptions
+                targetUsername={comment.author}
+                targetPermlink={comment.permlink}
+                onReportedAuthor={onReportedAuthor}
+                className="shrink-0"
+                ariaLabel="Comment options"
+              />
+            </div>
+
+            <div className="comment-content text-left text-zinc-50">
+              <ParsedBodyContent
+                parsed={parsedBody}
+                hideImages={hideImages}
+                highlightQuery={searchQuery}
+              />
+            </div>
 
             <div className="mt-2 flex items-center space-x-4 md:space-x-6">
               <button
@@ -266,6 +219,15 @@ export function CommentTile({
                 <span>Reply</span>
               </button>
 
+              <AddBookmarkButton
+                author={comment.author}
+                permlink={comment.permlink}
+                title={comment.title ?? ''}
+                body={comment.body ?? ''}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#e31337]"
+                ariaLabel="Add to bookmarks"
+              />
+
               {hasReplies && (
                 <button
                   type="button"
@@ -276,14 +238,6 @@ export function CommentTile({
                   {replies.length === 1 ? 'reply' : 'replies'}
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={() => onClickCommentReply?.(comment)}
-                className="opacity-0 transition-all duration-200 group-hover:opacity-100"
-              >
-                <MoreHorizontal className="h-4 w-4 text-zinc-500" />
-              </button>
             </div>
 
             {showVoteSlider && !hasAlreadyVoted && (
@@ -330,6 +284,7 @@ export function CommentTile({
               onClickCommentUpvote={onClickCommentUpvote}
               onClickCommentReply={onClickCommentReply}
               onClickUpvoteButton={onClickUpvoteButton}
+              onReportedAuthor={onReportedAuthor}
             />
           ))}
         </div>

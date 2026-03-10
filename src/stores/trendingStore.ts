@@ -17,7 +17,7 @@ interface TrendingState {
   loading: boolean
   error: string | null
   currentFeed: FeedType | null
-  fetchTrending: (feedType: FeedType) => Promise<void>
+  fetchTrending: (feedType: FeedType, signal?: AbortSignal) => Promise<void>
   reset: () => void
 }
 
@@ -32,15 +32,15 @@ const initialState = {
 
 export const useTrendingStore = create<TrendingState>((set, get) => ({
   ...initialState,
-  fetchTrending: async (feedType: FeedType) => {
+  fetchTrending: async (feedType: FeedType, signal?: AbortSignal) => {
     if (get().currentFeed === feedType && get().tags.length > 0) return
     const container = CONTAINER_ACCOUNTS[feedType]
     set({ loading: true, error: null, currentFeed: feedType })
     try {
       const [tags, authors, communities] = await Promise.all([
-        getTrendingTags(container),
-        getTrendingAuthors(container),
-        getTrendingCommunities(container),
+        getTrendingTags(container, signal),
+        getTrendingAuthors(container, signal),
+        getTrendingCommunities(container, signal),
       ])
       set({
         tags,
@@ -50,6 +50,7 @@ export const useTrendingStore = create<TrendingState>((set, get) => ({
         error: null,
       })
     } catch (e) {
+      if (signal?.aborted) return
       set({
         loading: false,
         error: e instanceof Error ? e.message : 'Failed to load trending',

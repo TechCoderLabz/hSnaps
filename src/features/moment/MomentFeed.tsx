@@ -3,12 +3,14 @@ import Masonry from 'react-masonry-css'
 import { useMomentStore } from '../../stores/momentStore'
 import { useAuthData } from '../../stores/authStore'
 import { useReputationStore, checkLowReputation } from '../../stores/reputationStore'
+import { useIgnoredAuthorsStore } from '../../stores/ignoredAuthorsStore'
 import { useViewStore } from '../../stores/viewStore'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { PostCard } from '../../components/PostCard'
 import { ComposeFab } from '../../components/ComposeFab'
 import { FeedSkeleton } from '../../components/FeedSkeleton'
 import { EmptyState } from '../../components/EmptyState'
+import { FEED_AVATARS } from '../../constants/feeds'
 
 const MASONRY_BP = { default: 5, 1919: 4, 1279: 3, 1023: 2, 639: 1 }
 
@@ -21,12 +23,15 @@ export function MomentFeed() {
   const useGrid = isDesktop && viewMode === 'grid'
 
   useEffect(() => {
-    let cancelled = false
-    fetchFeed().then(() => { if (cancelled) return })
-    return () => { cancelled = true }
+    const abortController = new AbortController()
+    fetchFeed(abortController.signal)
+    return () => { abortController.abort('avoid duplicate requests') }
   }, [fetchFeed])
 
-  const filteredPosts = posts.filter((p) => !checkLowReputation(repCache, p.author))
+  const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
+  const filteredPosts = posts.filter(
+    (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author)
+  )
 
   const renderItems = (items: React.ReactNode) =>
     useGrid ? (
@@ -40,7 +45,14 @@ export function MomentFeed() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-zinc-100">Moments</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-zinc-100">
+          <img
+            src={FEED_AVATARS.moments}
+            alt=""
+            className="h-8 w-8 rounded-full object-cover ring-1 ring-[#3a424a]"
+          />
+          Moments
+        </h1>
       </div>
       {isAuthenticated && (
         <ComposeFab feedType="moments" placeholder="Capture a moment..." />

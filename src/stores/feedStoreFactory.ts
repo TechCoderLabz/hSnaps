@@ -1,7 +1,6 @@
 /**
- * Feed stores (snaps, threads, waves, dbuzz, moments) using bridge APIs.
- * - Snaps/Threads/Waves/Moments: get_account_posts → get_discussion per container (replies = posts).
- * - DBuzz: get_ranked_posts with tag, paginated via nextStart.
+ * Feed stores (snaps, threads, waves, moments) using bridge APIs.
+ * get_account_posts → get_discussion per container (replies = posts).
  */
 import { create } from 'zustand'
 import type { NormalizedPost } from '../utils/types'
@@ -15,10 +14,9 @@ export interface FeedState {
   error: string | null
   hasMore: boolean
   page: number
-  /** For DBuzz pagination (start_author/start_permlink) */
-  nextStart: FeedPageCursor | null
-  fetchFeed: () => Promise<void>
-  loadMore: () => Promise<void>
+  nextCursor: FeedPageCursor | null
+  fetchFeed: (signal?: AbortSignal) => Promise<void>
+  loadMore: (signal?: AbortSignal) => Promise<void>
   reset: () => void
 }
 
@@ -28,54 +26,56 @@ const initialState = {
   error: null as string | null,
   hasMore: true,
   page: 1,
-  nextStart: null as FeedPageCursor | null,
+  nextCursor: null as FeedPageCursor | null,
 }
 
 export function createFeedStore(feedType: FeedType) {
   return create<FeedState>((set, get) => ({
     ...initialState,
-    fetchFeed: async () => {
-      set({ loading: true, error: null, page: 1, nextStart: null })
+    fetchFeed: async (signal?: AbortSignal) => {
+      set({ loading: true, error: null, page: 1, nextCursor: null })
       const observer = useAppAuthStore.getState().username ?? ''
       try {
-        const { posts, hasMore, nextStart } = await fetchFeedPage(feedType, 1, observer)
+        const { posts, hasMore, nextCursor } = await fetchFeedPage(feedType, 1, observer, null, signal)
         set({
           posts,
           hasMore,
-          nextStart: nextStart ?? null,
           page: 1,
+          nextCursor,
           loading: false,
           error: null,
         })
       } catch (e) {
+        if (signal?.aborted) return
         set({
           loading: false,
           error: e instanceof Error ? e.message : 'Failed to fetch',
         })
       }
     },
-    loadMore: async () => {
-      const { page, loading, hasMore, nextStart } = get()
+    loadMore: async (signal?: AbortSignal) => {
+      const { page, nextCursor, loading, hasMore } = get()
       if (loading || !hasMore) return
       set({ loading: true })
       const observer = useAppAuthStore.getState().username ?? ''
       const nextPage = page + 1
-      const dbuzzStart = feedType === 'dbuzz' ? nextStart : undefined
       try {
-        const { posts: newPosts, hasMore: more, nextStart: next } = await fetchFeedPage(
+        const { posts: newPosts, hasMore: more, nextCursor: next } = await fetchFeedPage(
           feedType,
           nextPage,
           observer,
-          dbuzzStart
+          nextCursor,
+          signal
         )
         set((s) => ({
           posts: [...s.posts, ...newPosts],
           page: nextPage,
           hasMore: more,
-          nextStart: next ?? null,
+          nextCursor: next,
           loading: false,
         }))
       } catch (e) {
+        if (signal?.aborted) return
         set({
           loading: false,
           error: e instanceof Error ? e.message : 'Failed to load more',
