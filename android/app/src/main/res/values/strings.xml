@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">hSnaps</string>
+    <string name="title_activity_main">hSnaps</string>
+    <string name="package_name">one.sagarkothari88.hsnaps</string>
+    <string name="custom_url_scheme">one.sagarkothari88.hsnaps</string>
+</resources>

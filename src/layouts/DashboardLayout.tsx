@@ -14,7 +14,6 @@ import { useFeedColumnCount } from '../hooks/useFeedColumnCount'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { useFollowingStore } from '../stores/followingStore'
-import { isMobilePlatform } from '../utils/platform-detection'
 import { useAuthData } from '../stores/authStore'
 
 export function DashboardLayout() {
@@ -22,7 +21,6 @@ export function DashboardLayout() {
   const columns = useFeedColumnCount()
   const isMobileView = columns === 1
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const isNative = isMobilePlatform()
   const { token } = useAuthData()
   const fetchIgnoredList = useIgnoredAuthorsStore((s) => s.fetchList)
   const setIgnoredList = useIgnoredAuthorsStore((s) => s.setList)
@@ -119,12 +117,12 @@ export function DashboardLayout() {
 
   return (
     <div
-      className={`flex min-h-screen flex-col bg-[#212529] text-[#f0f0f8] ${isNative ? 'pt-[20px]' : ''}`}
+      className="flex min-h-screen flex-col bg-[#212529] text-[#f0f0f8]"
     >
       <AppHeader
         left={headerLeft}
         right={headerRight}
-        className="sticky top-0 z-20 h-14 border-b border-[#3a424a] bg-[#212529]/95 py-0 sm:px-6"
+        className="sticky top-0 z-20 border-b border-[#3a424a] bg-[#212529]/95 py-0 sm:px-6"
       />
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
         <div className="h-full min-h-0">

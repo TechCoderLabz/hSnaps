@@ -24,7 +24,6 @@ export function AppHeader({ left, center, right, className, hideBrandOnMobile }:
   const { isAuthenticated } = useAuthData()
   const to = isAuthenticated ? '/dashboard' : '/'
   const brandClass = hideBrandOnMobile ? 'hidden md:flex min-w-0 flex-1 items-center gap-2' : 'flex min-w-0 flex-1 items-center gap-2'
-
   return (
     <header
       className={
@@ -35,6 +34,7 @@ export function AppHeader({ left, center, right, className, hideBrandOnMobile }:
           .filter(Boolean)
           .join(' ')
       }
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className={brandClass}>
         {left}
