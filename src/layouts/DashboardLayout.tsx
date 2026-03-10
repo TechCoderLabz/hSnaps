@@ -3,7 +3,7 @@
  * Safe area 20px top for native iOS/Android. Mobile: no feed switcher in app bar (use drawer). Load/refresh ignored authors on login and user switch.
  */
 import { useEffect, useRef, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import { useAuthStore as useHiveAuthStore } from 'hive-authentication'
 import { AppHeader } from '../components/AppHeader'
@@ -18,6 +18,7 @@ import { isMobilePlatform } from '../utils/platform-detection'
 import { useAuthData } from '../stores/authStore'
 
 export function DashboardLayout() {
+  const location = useLocation()
   const columns = useFeedColumnCount()
   const isMobileView = columns === 1
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -27,6 +28,11 @@ export function DashboardLayout() {
   const setIgnoredList = useIgnoredAuthorsStore((s) => s.setList)
   const prevTokenRef = useRef<string | null>(null)
   const previousUserRef = useRef<{ username: string } | null>(null)
+
+  const hideFeedFilter =
+    location.pathname.startsWith('/dashboard/settings') ||
+    location.pathname.startsWith('/dashboard/search-user') ||
+    location.pathname.startsWith('/snap/')
 
   useEffect(() => {
     if (token) {
@@ -92,10 +98,10 @@ export function DashboardLayout() {
   }, [])
 
   const headerRight = isMobileView ? (
-    <FeedFilterDropdown />
+    hideFeedFilter ? null : <FeedFilterDropdown />
   ) : (
     <>
-      <FeedFilterDropdown />
+      {!hideFeedFilter && <FeedFilterDropdown />}
       <HiveLoginButton />
     </>
   )

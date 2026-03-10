@@ -19,6 +19,7 @@ import { isMobilePlatform } from '../utils/platform-detection'
 import { APP_VERSION, APP_BRANCH, APP_COMMIT_HASH } from '../config/appVersion'
 import { HiveLoginButton } from './HiveLoginButton'
 import { AppLogo } from './AppLogo'
+import { useAuthData } from '../stores/authStore'
 import type { UnifiedFeedType } from '../hooks/useFeedByType'
 import { FEED_LABELS, FEED_AVATARS } from '../constants/feeds'
 import {
@@ -42,6 +43,7 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
   const navigate = useNavigate()
   const { feedType, setFeedType } = useMobileFeedStore()
   const isNative = isMobilePlatform()
+  const { isAuthenticated } = useAuthData()
 
   const handleNav = (path: string) => {
     navigate(path.startsWith('/') ? path : `/dashboard/${path}`)
@@ -149,26 +151,30 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   <span>Search User</span>
                 </button>
               </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('/dashboard/bookmarks')}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
-                >
-                  <Bookmark className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
-                  <span>Bookmarks</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('/dashboard/ignored')}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
-                >
-                  <EyeOff className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
-                  <span>Ignored</span>
-                </button>
-              </li>
+              {isAuthenticated && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleNav('/dashboard/bookmarks')}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  >
+                    <Bookmark className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                    <span>Bookmarks</span>
+                  </button>
+                </li>
+              )}
+              {isAuthenticated && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleNav('/dashboard/ignored')}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  >
+                    <EyeOff className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                    <span>Ignored</span>
+                  </button>
+                </li>
+              )}
               <li>
                 <button
                   type="button"
