@@ -229,7 +229,15 @@ export function UserProfilePage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => {
+                const prev = sessionStorage.getItem('hsnaps_prev_route')
+                if (prev) {
+                  navigate(prev)
+                  sessionStorage.removeItem('hsnaps_prev_route')
+                } else {
+                  navigate('/dashboard')
+                }
+              }}
               className="inline-flex items-center rounded-lg px-2 py-1 text-xs text-[#9ca3b0] transition-colors hover:bg-[#3a424a] hover:text-[#f0f0f8]"
             >
               ← 

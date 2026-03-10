@@ -39,6 +39,7 @@ import {
 import { FEED_AVATARS } from '../constants/feeds'
 import { SUPPORT_DISCORD_URL, VOTE_WITNESS_URL, SUPPORTERS } from '../constants/support'
 import type { FeedType } from '../utils/types'
+import { HiveToolbar } from 'hive-react-kit'
 
 const FEED_FEATURES: { title: string; desc: string; feedId: FeedType }[] = [
   { title: 'Snaps', desc: 'Short, punchy posts. PeakD-style snaps on Hive.', feedId: 'snaps' },
@@ -343,6 +344,7 @@ export function LandingPage() {
           <p>All Rights Reserved © 2026 hSnaps</p>
         </footer>
       </div>
+      <HiveToolbar isHsnaps={false} backgroundColor='#212529' borderTopColor='#3a424a' textColor='#f0f0f8'/>
     </div>
   )
 }

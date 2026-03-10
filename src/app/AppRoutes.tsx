@@ -8,12 +8,11 @@ import { UnifiedFeedPage } from '../features/feed/UnifiedFeedPage'
 import { PostCommentsPage } from '../pages/PostCommentsPage'
 import { TagFeedPage } from '../pages/TagFeedPage'
 import { BookmarksPage } from '../pages/BookmarksPage'
-import { PlaceholderPage } from '../pages/PlaceholderPage'
+import { SearchUserPage } from '../pages/SearchUserPage'
 import { IgnoredPage } from '../pages/IgnoredPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
 import { UserProfilePage } from '../pages/UserProfilePage'
-import { Search } from 'lucide-react'
 
 export function AppRoutes() {
   const routes = useRoutes([
@@ -33,7 +32,7 @@ export function AppRoutes() {
       children: [
         { index: true, element: <UnifiedFeedPage /> },
         { path: 'bookmarks', element: <BookmarksPage /> },
-        { path: 'search-user', element: <PlaceholderPage title="Search User" icon={<Search className="h-12 w-12 text-[#9ca3b0]" />} /> },
+        { path: 'search-user', element: <SearchUserPage /> },
         { path: 'ignored', element: <IgnoredPage /> },
         { path: 'settings', element: <SettingsPage /> },
         { path: 'snaps', element: <Navigate to="/dashboard" replace /> },
