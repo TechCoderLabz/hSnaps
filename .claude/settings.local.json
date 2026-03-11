@@ -5,7 +5,11 @@
       "Bash(npm install react-masonry-css)",
       "Bash(npx tsc --noEmit --skipLibCheck)",
       "Bash(npx vite build)",
-      "WebFetch(domain:api.syncad.com)"
+      "WebFetch(domain:api.syncad.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:audio.3speak.tv)",
+      "Bash(gh api:*)"
     ]
   }
 }

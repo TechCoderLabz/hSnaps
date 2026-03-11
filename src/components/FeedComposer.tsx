@@ -11,6 +11,7 @@ import { parseBodyFromMarkdown } from '../utils/postBody'
 import { ParsedBodyContent } from './FeedItemBody'
 import GiphyPicker from './GiphyPicker'
 import ImageUploader from './ImageUploader'
+import AudioUploader from './AudioUploader'
 import type { FeedType } from '../utils/types'
 import { FEED_CHAR_LIMITS } from '../utils/types'
 
@@ -40,10 +41,17 @@ function extractImageUrlsFromMarkdown(md: string): string[] {
 const DEVELOPER = 'sagarkothari88'
 
 /** Build app-specific json_metadata for each feed type. Compulsory fields per feed; rest optional. */
-function buildJsonMetadataForFeed(feedType: FeedType, body: string): string {
+function buildJsonMetadataForFeed(
+  feedType: FeedType,
+  body: string,
+  audioInfo?: { url: string; duration: number } | null,
+): string {
   const images = extractImageUrlsFromMarkdown(body)
   const now = new Date()
   const wavesTag = `waves-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+  const audioMeta = audioInfo
+    ? { audio: { platform: '3speak', url: audioInfo.url, duration: audioInfo.duration } }
+    : {}
 
   switch (feedType) {
     case 'snaps':
@@ -52,6 +60,7 @@ function buildJsonMetadataForFeed(feedType: FeedType, body: string): string {
         developer: DEVELOPER,
         tags: ['hive-178315', 'snaps'],
         ...(images.length > 0 && { image: images }),
+        ...audioMeta,
       })
     case 'waves':
       return JSON.stringify({
@@ -63,6 +72,7 @@ function buildJsonMetadataForFeed(feedType: FeedType, body: string): string {
         ...(images.length > 0 && { image_ratios: images.map(() => 1.17) }),
         format: 'markdown+html',
         links: [],
+        ...audioMeta,
       })
     case 'threads':
       return JSON.stringify({
@@ -73,6 +83,7 @@ function buildJsonMetadataForFeed(feedType: FeedType, body: string): string {
         tags: ['leofinance'],
         dimensions: {},
         format: 'markdown',
+        ...audioMeta,
       })
     case 'moments':
       return JSON.stringify({
@@ -80,6 +91,7 @@ function buildJsonMetadataForFeed(feedType: FeedType, body: string): string {
         developer: DEVELOPER,
         image: images.length > 0 ? images : [],
         tags: ['moments'],
+        ...audioMeta,
       })
     default:
       return JSON.stringify({
@@ -87,6 +99,7 @@ function buildJsonMetadataForFeed(feedType: FeedType, body: string): string {
         developer: DEVELOPER,
         tags: ['hive-178315', 'snaps'],
         format: 'markdown',
+        ...audioMeta,
       })
   }
 }
@@ -128,6 +141,8 @@ export function FeedComposer({
   const [isGiphyOpen, setIsGiphyOpen] = useState(false)
   const [isEmojiOpen, setIsEmojiOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [audioEmbedUrl, setAudioEmbedUrl] = useState<string | null>(null)
+  const [audioDuration, setAudioDuration] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const insertAtCursor = useCallback(
@@ -161,6 +176,16 @@ export function FeedComposer({
       el.focus()
       el.setSelectionRange(start + markdown.length, start + markdown.length)
     }, 0)
+  }
+
+  const insertAudio = (url: string, durationSeconds: number) => {
+    setAudioEmbedUrl(url)
+    setAudioDuration(durationSeconds)
+  }
+
+  const removeAudio = () => {
+    setAudioEmbedUrl(null)
+    setAudioDuration(0)
   }
 
   const insertGif = (gifUrl: string) => {
@@ -201,21 +226,30 @@ export function FeedComposer({
     }
     setIsSubmitting(true)
     try {
+      // Append audio embed URL to body (matching reference: body += `\n${audioEmbedUrl}`)
+      let finalBody = body.trim()
+      if (audioEmbedUrl) {
+        finalBody += `\n${audioEmbedUrl}`
+      }
+
+      const audioInfo = audioEmbedUrl
+        ? { url: audioEmbedUrl, duration: audioDuration }
+        : null
+
       if (composeSingleFeedMode && containerRef) {
-        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, body.trim())
-        await comment(containerRef.author, containerRef.permlink, body.trim(), '', jsonMetadata)
+        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, audioInfo)
+        await comment(containerRef.author, containerRef.permlink, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       } else {
-        const meta = replyMode
-          ? { tags: [] as string[], app: 'hsnaps/1.0.0' }
-          : { tags: feedType === 'snaps' ? ['hive-178315', 'snaps'] : feedType === 'threads' ? ['leofinance'] : feedType === 'waves' ? ['ecency'] : ['liketu'], app: feedType === 'snaps' ? 'hivesnaps/1.0' : feedType === 'threads' ? 'leothreads/0.3' : feedType === 'waves' ? 'ecency/3.5.1-mobile' : 'peakd/2026.3.1' }
         const jsonMetadata = replyMode
-          ? JSON.stringify({ tags: meta.tags, app: meta.app, format: 'markdown' })
-          : buildJsonMetadataForFeed(feedType, body.trim())
-        await comment(parentAuthor!, parentPermlink!, body.trim(), '', jsonMetadata)
+          ? JSON.stringify({ tags: [] as string[], app: 'hsnaps/1.0.0', format: 'markdown' })
+          : buildJsonMetadataForFeed(feedType, finalBody, audioInfo)
+        await comment(parentAuthor!, parentPermlink!, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       }
       setBody('')
+      setAudioEmbedUrl(null)
+      setAudioDuration(0)
       onSuccess?.()
     } catch {
       // error toast already shown by useHiveOperations
@@ -253,6 +287,7 @@ export function FeedComposer({
             🔗
           </button>
           <ImageUploader onImageUploaded={insertImage} disabled={isSubmitting} />
+          <AudioUploader onAudioUploaded={insertAudio} disabled={isSubmitting} />
           <button type="button" onClick={() => setIsEmojiOpen(true)} className="p-2 rounded-lg hover:bg-[#2f353d] text-[#c8cad6] text-sm" title="Emoji">
             😀
           </button>
@@ -282,6 +317,39 @@ export function FeedComposer({
               over ? 'border-red-500/50' : 'border-[#3a424a]'
             }`}
           />
+          {audioEmbedUrl && (
+            <div className="mt-2 rounded-xl border border-[#3a424a] bg-[#1a1d21] overflow-hidden">
+              {/* Audio player iframe */}
+              <iframe
+                src={audioEmbedUrl}
+                title="Audio preview"
+                className="h-24 w-full border-0"
+                allow="autoplay"
+              />
+              {/* Info bar with duration & remove */}
+              <div className="flex items-center gap-2 border-t border-[#3a424a] px-3 py-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 text-[#e31337]">
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+                <span className="flex-1 truncate text-xs text-[#9ca3b0]">
+                  Audio attached{audioDuration > 0 ? ` (${Math.floor(audioDuration / 60)}:${String(audioDuration % 60).padStart(2, '0')})` : ''}
+                </span>
+                <button
+                  type="button"
+                  onClick={removeAudio}
+                  className="shrink-0 rounded p-0.5 text-[#9ca3b0] hover:bg-[#3a424a] hover:text-red-400"
+                  title="Remove audio"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-3.5 w-3.5">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className={`text-xs ${over ? 'text-red-400' : 'text-[#9ca3b0]'}`}>

@@ -125,6 +125,24 @@ function ThreeSpeakAudioEmbed({ url }: { url: string }) {
   )
 }
 
+/** HTML5 audio player for direct audio file URLs (mp3, wav, ogg, etc.). */
+function AudioFilePlayer({ url }: { url: string }) {
+  const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] ?? 'Audio')
+  return (
+    <div className="my-3 overflow-hidden rounded-xl border border-[#3a424a] bg-[#1a1d21] p-3">
+      <div className="mb-2 flex items-center gap-2 text-sm text-[#9ca3b0]">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-[#e31337]">
+          <path d="M9 18V5l12-2v13" />
+          <circle cx="6" cy="18" r="3" />
+          <circle cx="18" cy="16" r="3" />
+        </svg>
+        <span className="truncate">{fileName}</span>
+      </div>
+      <audio src={url} controls preload="metadata" className="w-full h-10" />
+    </div>
+  )
+}
+
 function TwitterEmbed({ id }: { id: string }) {
   const [active, setActive] = useState(false)
   const videoKey = `twitter:${id}`
@@ -248,6 +266,10 @@ export function ParsedBodyContent({
 
       {parsed.threeSpeakAudioUrls.map((url) => (
         <ThreeSpeakAudioEmbed key={url} url={url} />
+      ))}
+
+      {parsed.audioFileUrls?.map((url) => (
+        <AudioFilePlayer key={url} url={url} />
       ))}
 
       {parsed.twitterStatusIds.map((id) => (
