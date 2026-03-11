@@ -3,11 +3,12 @@
  * Image upload, Mention, Emoji, Giphy), live preview. View/preview uses Hive renderer only.
  * Renders nothing when user is not logged in.
  */
-import React, { useRef, useState, useCallback } from 'react'
+import React, { useRef, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
-import { useMarkdownRenderer } from '../hooks/useMarkdownRenderer'
 import { useHiveOperations } from '../hooks/useHiveOperations'
+import { parseBodyFromMarkdown } from '../utils/postBody'
+import { ParsedBodyContent } from './FeedItemBody'
 import GiphyPicker from './GiphyPicker'
 import ImageUploader from './ImageUploader'
 import type { FeedType } from '../utils/types'
@@ -15,8 +16,11 @@ import { FEED_CHAR_LIMITS } from '../utils/types'
 
 interface FeedComposerProps {
   feedType: FeedType
-  parentAuthor: string
-  parentPermlink: string
+  /** When provided with selectedFeed, post to a single feed (one comment). */
+  containerRefs?: Partial<Record<FeedType, { author: string; permlink: string }>>
+  selectedFeed?: FeedType
+  parentAuthor?: string
+  parentPermlink?: string
   onSuccess?: () => void
   placeholder?: string
   authorMention?: string
@@ -24,11 +28,67 @@ interface FeedComposerProps {
   replyMode?: boolean
 }
 
-const FEED_METADATA: Record<FeedType, { tags: string[]; app: string }> = {
-  snaps:   { tags: ['snaps'],                  app: 'peakd/2026.2.6'     },
-  threads: { tags: ['leofinance'],             app: 'leothreads/1.0.0'   },
-  waves:   { tags: ['ecency'],                 app: 'ecency/3.0.0'       },
-  moments:  { tags: ['liketu'],                 app: 'liketu/1.0.0'       },
+/** Extract image URLs from markdown ![](url) or ![alt](url) */
+function extractImageUrlsFromMarkdown(md: string): string[] {
+  const re = /!\[([^\]]*)\]\(([^)]+)\)/g
+  const urls: string[] = []
+  let m
+  while ((m = re.exec(md)) !== null) urls.push(m[2].trim())
+  return [...new Set(urls)]
+}
+
+const DEVELOPER = 'sagarkothari88'
+
+/** Build app-specific json_metadata for each feed type. Compulsory fields per feed; rest optional. */
+function buildJsonMetadataForFeed(feedType: FeedType, body: string): string {
+  const images = extractImageUrlsFromMarkdown(body)
+  const now = new Date()
+  const wavesTag = `waves-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+
+  switch (feedType) {
+    case 'snaps':
+      return JSON.stringify({
+        app: 'hivesnaps/1.0',
+        developer: DEVELOPER,
+        tags: ['hive-178315', 'snaps'],
+        ...(images.length > 0 && { image: images }),
+      })
+    case 'waves':
+      return JSON.stringify({
+        app: 'ecency/3.5.1-mobile',
+        developer: DEVELOPER,
+        tags: [wavesTag],
+        type: 'wave',
+        ...(images.length > 0 && { image: images }),
+        ...(images.length > 0 && { image_ratios: images.map(() => 1.17) }),
+        format: 'markdown+html',
+        links: [],
+      })
+    case 'threads':
+      return JSON.stringify({
+        app: 'leothreads/0.3',
+        developer: DEVELOPER,
+        isPoll: false,
+        pollOptions: {},
+        tags: ['leofinance'],
+        dimensions: {},
+        format: 'markdown',
+      })
+    case 'moments':
+      return JSON.stringify({
+        app: 'peakd/2026.3.1',
+        developer: DEVELOPER,
+        image: images.length > 0 ? images : [],
+        tags: ['moments'],
+      })
+    default:
+      return JSON.stringify({
+        app: 'hivesnaps/1.0',
+        developer: DEVELOPER,
+        tags: ['hive-178315', 'snaps'],
+        format: 'markdown',
+      })
+  }
 }
 
 const EMOJIS = [
@@ -44,6 +104,8 @@ const REPLY_CHAR_LIMIT = 2000
 
 export function FeedComposer({
   feedType,
+  containerRefs,
+  selectedFeed,
   parentAuthor,
   parentPermlink,
   onSuccess,
@@ -51,11 +113,16 @@ export function FeedComposer({
   replyMode = false,
 }: FeedComposerProps) {
   const { isAuthenticated } = useAuthData()
-  const renderHive = useMarkdownRenderer()
   const { comment } = useHiveOperations()
   if (!isAuthenticated) return null
 
-  const limit = replyMode ? REPLY_CHAR_LIMIT : FEED_CHAR_LIMITS[feedType]
+  const composeSingleFeedMode = Boolean(containerRefs && selectedFeed)
+  const effectiveFeed = composeSingleFeedMode ? selectedFeed! : feedType
+  const limit = replyMode
+    ? REPLY_CHAR_LIMIT
+    : FEED_CHAR_LIMITS[effectiveFeed]
+  const containerRef = composeSingleFeedMode ? containerRefs?.[effectiveFeed] : null
+  const hasActiveFeed = !composeSingleFeedMode || Boolean(containerRef)
   const [body, setBody] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const [isGiphyOpen, setIsGiphyOpen] = useState(false)
@@ -121,17 +188,33 @@ export function FeedComposer({
     setIsEmojiOpen(false)
   }
 
+  const imagesInBody = extractImageUrlsFromMarkdown(body)
+  const momentsSelectedNoImage = Boolean(composeSingleFeedMode && effectiveFeed === 'moments' && imagesInBody.length === 0)
+  const parsedPreview = useMemo(() => parseBodyFromMarkdown(body), [body])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (body.length > limit || isSubmitting) return
+    if (composeSingleFeedMode && effectiveFeed === 'moments' && imagesInBody.length === 0) {
+      toast.error('Moments requires at least one image. Please upload or add an image to your post.')
+      return
+    }
     setIsSubmitting(true)
     try {
-      const meta = replyMode
-        ? { tags: [] as string[], app: 'hsnaps/1.0.0' }
-        : FEED_METADATA[feedType]
-      const jsonMetadata = JSON.stringify({ tags: meta.tags, app: meta.app, format: 'markdown' })
-      await comment(parentAuthor, parentPermlink, body.trim(), '', jsonMetadata)
-      toast.success('Posted successfully!')
+      if (composeSingleFeedMode && containerRef) {
+        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, body.trim())
+        await comment(containerRef.author, containerRef.permlink, body.trim(), '', jsonMetadata)
+        toast.success('Posted successfully!')
+      } else {
+        const meta = replyMode
+          ? { tags: [] as string[], app: 'hsnaps/1.0.0' }
+          : { tags: feedType === 'snaps' ? ['hive-178315', 'snaps'] : feedType === 'threads' ? ['leofinance'] : feedType === 'waves' ? ['ecency'] : ['liketu'], app: feedType === 'snaps' ? 'hivesnaps/1.0' : feedType === 'threads' ? 'leothreads/0.3' : feedType === 'waves' ? 'ecency/3.5.1-mobile' : 'peakd/2026.3.1' }
+        const jsonMetadata = replyMode
+          ? JSON.stringify({ tags: meta.tags, app: meta.app, format: 'markdown' })
+          : buildJsonMetadataForFeed(feedType, body.trim())
+        await comment(parentAuthor!, parentPermlink!, body.trim(), '', jsonMetadata)
+        toast.success('Posted successfully!')
+      }
       setBody('')
       onSuccess?.()
     } catch {
@@ -181,11 +264,9 @@ export function FeedComposer({
         {showPreview && body.trim() && (
           <div className="mb-3 rounded-xl border border-[#3a424a] bg-[#2f353d] overflow-hidden">
             <div className="px-3 py-2 text-xs uppercase tracking-wide text-[#9ca3b0] bg-[#272d34]">Preview</div>
-            <div
-              className="px-3 m-2 py-2 prose prose-invert prose-zinc max-w-none !p-0 !border-0 !bg-transparent text-sm markdown-preview break-words [&_img]:max-w-full [&_a]:text-[#e31337] [&_a]:underline"
-              // eslint-disable-next-line react/no-danger -- View only: Hive renderer output (@hiveio/content-renderer)
-              dangerouslySetInnerHTML={{ __html: renderHive(body) }}
-            />
+            <div className="px-3 py-2 text-sm text-zinc-300 [&_a]:text-[#e31337] [&_a]:underline [&_a]:break-all">
+              <ParsedBodyContent parsed={parsedPreview} imageLayout="grid" />
+            </div>
           </div>
         )}
 
@@ -201,14 +282,20 @@ export function FeedComposer({
               over ? 'border-red-500/50' : 'border-[#3a424a]'
             }`}
           />
-          <div className="mt-2 flex items-center justify-between">
-            <span className={`text-xs ${over ? 'text-red-400' : 'text-[#9ca3b0]'}`}>
-              {body.length} / {limit}
-            </span>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${over ? 'text-red-400' : 'text-[#9ca3b0]'}`}>
+                {body.length} / {limit}
+              </span>
+              {momentsSelectedNoImage && (
+                <span className="text-xs text-amber-400">Moments requires at least one image</span>
+              )}
+            </div>
             <button
               type="submit"
-              disabled={over || isSubmitting || !body.trim()}
+              disabled={over || isSubmitting || !body.trim() || !hasActiveFeed || momentsSelectedNoImage}
               className="rounded-lg bg-[#e31337] px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-[#c51231]"
+              title={momentsSelectedNoImage ? 'Moments requires at least one image' : undefined}
             >
               {isSubmitting ? 'Posting…' : 'Post'}
             </button>

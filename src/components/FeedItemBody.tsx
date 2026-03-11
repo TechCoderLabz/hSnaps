@@ -187,6 +187,8 @@ export interface ParsedBodyContentProps {
   parsed: ParsedPostBody
   /** When true, hide image carousel (e.g. when 3speak is present). */
   hideImages?: boolean
+  /** When 'grid', show images in a side-by-side grid (e.g. composer preview). Default 'carousel'. */
+  imageLayout?: 'carousel' | 'grid'
   /** When set, highlight matching text in content (e.g. comment search). */
   highlightQuery?: string
   className?: string
@@ -196,15 +198,30 @@ export interface ParsedBodyContentProps {
 export function ParsedBodyContent({
   parsed,
   hideImages = false,
+  imageLayout = 'carousel',
   highlightQuery,
   className = '',
 }: ParsedBodyContentProps) {
   return (
     <div className={`feed-item-body space-y-2 ${className}`}>
       {!hideImages && parsed.imageUrls.length > 0 && (
-        <div className="post-card-grid-media mb-2">
-          <ImageCarousel imageUrls={parsed.imageUrls} imageClassName="rounded-lg" />
-        </div>
+        imageLayout === 'grid' ? (
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            {parsed.imageUrls.map((url) => (
+              <img
+                key={url}
+                src={url}
+                alt=""
+                className="rounded-lg object-cover w-full aspect-square max-h-40"
+                loading="lazy"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="post-card-grid-media mb-2">
+            <ImageCarousel imageUrls={parsed.imageUrls} imageClassName="rounded-lg" />
+          </div>
+        )
       )}
 
       {parsed.plainText && (

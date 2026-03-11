@@ -2,16 +2,19 @@ import { useEffect, useState } from 'react'
 import type { FeedType } from '../utils/types'
 import { getLatestContainer } from '../services/hiveService'
 import { useAuthData } from '../stores/authStore'
+import { useSnapsStore } from '../stores/snapsStore'
+import { useThreadsStore } from '../stores/threadsStore'
+import { useWavesStore } from '../stores/wavesStore'
+import { useMomentStore } from '../stores/momentStore'
+import { FEED_LABELS, FEED_AVATARS } from '../constants/feeds'
+import { FeedComposer } from './FeedComposer'
 
 function useObserver(): string {
   const { username } = useAuthData()
   return username ?? ''
 }
-import { useSnapsStore } from '../stores/snapsStore'
-import { useThreadsStore } from '../stores/threadsStore'
-import { useWavesStore } from '../stores/wavesStore'
-import { useMomentStore } from '../stores/momentStore'
-import { FeedComposer } from './FeedComposer'
+
+const FEED_TYPES: FeedType[] = ['snaps', 'waves', 'threads', 'moments']
 
 const FEED_STORES: Record<FeedType, () => { fetchFeed: () => Promise<void> }> = {
   snaps: useSnapsStore,
@@ -36,9 +39,10 @@ export function ComposeFab({
   const observer = useObserver()
   const { fetchFeed } = FEED_STORES[feedType]()
   const [open, setOpen] = useState(false)
-  const [containerRef, setContainerRef] = useState<{ author: string; permlink: string } | null>(null)
+  const [containerRefs, setContainerRefs] = useState<Partial<Record<FeedType, { author: string; permlink: string }>>>({})
   const [refLoading, setRefLoading] = useState(false)
   const [refError, setRefError] = useState<string | null>(null)
+  const [selectedFeed, setSelectedFeed] = useState<FeedType>('snaps')
 
   useEffect(() => {
     if (!open) return
@@ -46,20 +50,33 @@ export function ComposeFab({
     const signal = abortController.signal
     setRefLoading(true)
     setRefError(null)
-    getLatestContainer(feedType, observer, signal)
-      .then((data) => {
+    Promise.allSettled(
+      FEED_TYPES.map((ft) =>
+        getLatestContainer(ft, observer, signal).then((data) => ({ feedType: ft, data }))
+      )
+    )
+      .then((results) => {
         if (signal.aborted) return
-        setContainerRef(data)
+        const refs: Partial<Record<FeedType, { author: string; permlink: string }>> = {}
+        results.forEach((r) => {
+          if (r.status === 'fulfilled' && r.value?.data) {
+            refs[r.value.feedType] = r.value.data
+          }
+        })
+        setContainerRefs(refs)
+        if (Object.keys(refs).length === 0) {
+          setRefError('Failed to load containers')
+        }
       })
       .catch((e) => {
         if (signal.aborted) return
-        setRefError(e instanceof Error ? e.message : 'Failed to load container')
+        setRefError(e instanceof Error ? e.message : 'Failed to load containers')
       })
       .finally(() => {
         if (!signal.aborted) setRefLoading(false)
       })
     return () => { abortController.abort('avoid duplicate requests') }
-  }, [open, feedType, observer])
+  }, [open, observer])
 
   if (!isAuthenticated) return null
 
@@ -95,10 +112,10 @@ export function ComposeFab({
             aria-hidden
           />
 
-          {/* Modal panel — single panel, no line below header */}
-          <div className="relative z-10 w-full max-w-2xl animate-[slideUp_200ms_ease-out] sm:animate-[scaleIn_200ms_ease-out] rounded-2xl border border-[#3a424a] bg-[#262b30] overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#262b30]">
+          {/* Modal panel — max height on mobile so sheet stays visible; content scrolls */}
+          <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[#3a424a] border-b-0 bg-[#262b30] animate-[slideUp_200ms_ease-out] sm:rounded-2xl sm:border-b sm:animate-[scaleIn_200ms_ease-out]">
+            {/* Header — sticky so it stays visible when content scrolls */}
+            <div className="flex shrink-0 items-center justify-between px-4 py-3 bg-[#262b30] border-b border-[#3a424a] sm:border-b-0">
               <h2 className="text-base font-semibold text-[#f0f0f8]">Create new post</h2>
               <button
                 type="button"
@@ -120,8 +137,8 @@ export function ComposeFab({
               </button>
             </div>
 
-            {/* Content area */}
-            <div className="bg-[#262b30]">
+            {/* Content area — scrollable when content grows so sheet doesn't go off-screen */}
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#262b30]">
               {refLoading && (
                 <div className="flex items-center justify-center gap-3 px-4 py-10 text-sm text-[#9ca3b0]">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#e31337] border-t-transparent" />
@@ -150,18 +167,47 @@ export function ComposeFab({
                 </div>
               )}
 
-              {!refLoading && !refError && containerRef && (
-                <FeedComposer
-                  feedType={feedType}
-                  parentAuthor={containerRef.author}
-                  parentPermlink={containerRef.permlink}
-                  placeholder={placeholder}
-                  authorMention={authorMention}
-                  onSuccess={() => {
-                    setOpen(false)
-                    setTimeout(() => void fetchFeed(), 5000)
-                  }}
-                />
+              {!refLoading && !refError && Object.keys(containerRefs).length > 0 && (
+                <>
+                  <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-[#3a424a]">
+                    <span className="text-xs font-medium text-[#9ca3b0] uppercase tracking-wide w-full shrink-0">Post to</span>
+                    {FEED_TYPES.map((ft) => (
+                      <label
+                        key={ft}
+                        className={`flex items-center gap-2 cursor-pointer select-none rounded-lg px-3 py-2 transition-colors ${
+                          !containerRefs[ft] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#2f353d]/70'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="compose-feed"
+                          value={ft}
+                          checked={selectedFeed === ft}
+                          onChange={() => containerRefs[ft] && setSelectedFeed(ft)}
+                          disabled={!containerRefs[ft]}
+                          className="h-4 w-4 shrink-0 border-[#3a424a] bg-[#2f353d] text-[#e31337] focus:ring-[#e31337]/40"
+                        />
+                        <img
+                          src={FEED_AVATARS[ft]}
+                          alt=""
+                          className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-[#3a424a]"
+                        />
+                        <span className="text-sm font-medium text-[#f0f0f8]">{FEED_LABELS[ft]}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <FeedComposer
+                    feedType={feedType}
+                    containerRefs={containerRefs as Partial<Record<FeedType, { author: string; permlink: string }>>}
+                    selectedFeed={selectedFeed}
+                    placeholder={placeholder}
+                    authorMention={authorMention}
+                    onSuccess={() => {
+                      setOpen(false)
+                      setTimeout(() => void fetchFeed(), 5000)
+                    }}
+                  />
+                </>
               )}
             </div>
           </div>
