@@ -83,10 +83,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
         aria-hidden
       />
       <aside
-        className="fixed left-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col border-r border-[#3a424a] bg-[#212529] shadow-xl"
+        className="app-header-safe-area fixed left-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col border-r border-[#3a424a] bg-[#212529] shadow-xl"
         role="dialog"
         aria-label="Menu"
-        style={isNative ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : undefined}
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#3a424a] px-4">
           <div className="flex items-center gap-2">

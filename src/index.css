@@ -20,6 +20,11 @@ body {
   color: var(--hive-light-grey);
 }
 
+/* Force safe area top inset so header stays below status bar/notch (Capacitor iOS/Android) */
+.app-header-safe-area {
+  padding-top: env(safe-area-inset-top, 0px) !important;
+}
+
 .hive-surface {
   background: #262b30;
   border: 1px solid #363c43;

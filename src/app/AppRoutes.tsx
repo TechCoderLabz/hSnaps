@@ -12,12 +12,14 @@ import { SearchUserPage } from '../pages/SearchUserPage'
 import { IgnoredPage } from '../pages/IgnoredPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
+import { CSAEStandardsPage } from '../pages/CSAEStandardsPage'
 import { UserProfilePage } from '../pages/UserProfilePage'
 
 export function AppRoutes() {
   const routes = useRoutes([
     { path: '/', element: <LandingPage /> },
     { path: '/privacy', element: <PrivacyPage /> },
+    { path: '/csae-standards', element: <CSAEStandardsPage /> },
     { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
     { path: '/tags/:tag', element: <TagFeedPage /> },
     { path: '/user/:username', element: <UserProfilePage /> },

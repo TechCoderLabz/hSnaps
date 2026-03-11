@@ -25,32 +25,27 @@ export function AppHeader({ left, center, right, className, hideBrandOnMobile }:
   const to = isAuthenticated ? '/dashboard' : '/'
   const brandClass = hideBrandOnMobile ? 'hidden md:flex min-w-0 flex-1 items-center gap-2' : 'flex min-w-0 flex-1 items-center gap-2'
   return (
-    <header
-      className={
-        [
-          'flex items-center justify-between gap-2 px-4 py-5 sm:px-8',
-          className,
-        ]
-          .filter(Boolean)
-          .join(' ')
-      }
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    <div
+      className={['app-header-safe-area', className].filter(Boolean).join(' ')}
+      role="banner"
     >
-      <div className={brandClass}>
-        {left}
-        <AppLogo />
-        <Link
-          to={to}
-          className="text-xl font-semibold bg-gradient-to-r from-[#f0f0f8] via-[#e7e7f1] to-[#ff7a92] bg-clip-text text-transparent hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-amber-500/50 rounded sm:text-2xl"
-          aria-label={isAuthenticated ? 'Go to dashboard' : 'Go to home'}
-        >
-          hSnaps
-        </Link>
-      </div>
-      {center ? <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-3 md:gap-6" aria-label="Page sections">{center}</nav> : null}
-      <div className="flex shrink-0 items-center gap-3">
-        {right === undefined ? <HiveLoginButton /> : right}
-      </div>
-    </header>
+      <header className="flex items-center justify-between gap-2 px-4 py-5 sm:px-8">
+        <div className={brandClass}>
+          {left}
+          <AppLogo />
+          <Link
+            to={to}
+            className="text-xl font-semibold bg-gradient-to-r from-[#f0f0f8] via-[#e7e7f1] to-[#ff7a92] bg-clip-text text-transparent hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-amber-500/50 rounded sm:text-2xl"
+            aria-label={isAuthenticated ? 'Go to dashboard' : 'Go to home'}
+          >
+            hSnaps
+          </Link>
+        </div>
+        {center ? <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-3 md:gap-6" aria-label="Page sections">{center}</nav> : null}
+        <div className="flex shrink-0 items-center gap-3">
+          {right === undefined ? <HiveLoginButton /> : right}
+        </div>
+      </header>
+    </div>
   )
 }
