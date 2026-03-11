@@ -11,13 +11,17 @@ const TWITTER_STATUS_REGEX =
 const YOUTUBE_REGEX =
   /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&\s]+)|https?:\/\/youtu\.be\/([^?\s]+)|https?:\/\/(?:www\.)?youtube\.com\/shorts\/([^?\s]+)/gi
 const THREE_SPEAK_REGEX = /https?:\/\/(?:play\.)?3speak\.tv\/[^\s"'<>)]+/gi
+/** 3Speak audio player URL (iframe); e.g. https://audio.3speak.tv/play?a=crk81c5f */
+const THREE_SPEAK_AUDIO_REGEX = /https?:\/\/audio\.3speak\.tv\/play\?[^\s"'<>)]+/gi
 const ANY_URL_REGEX = /\bhttps?:\/\/[^\s<>)\]]+/gi
 
-/** Remove Liketu promo block: "---" + "For the best experience view this post on Liketu" */
+/** Remove Liketu promo: "--- For the best experience view this post on Liketu" (single line) or "---" + newline + phrase. */
 function stripLiketuPromo(body: string): string {
   if (!body || typeof body !== 'string') return body
-  return body
-    .replace(/\n?---\s*\n\s*For the best experience view this post on Liketu\s*/gi, '')
+  const normalized = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  return normalized
+    .replace(/\n?---\s*For the best experience,?\s*view this post on Liketu\s*/gi, '')
+    .replace(/\n?---\s*\n+\s*For the best experience,?\s*view this post on Liketu\s*/gi, '')
     .trim()
 }
 
@@ -25,6 +29,8 @@ export interface ParsedPostBody {
   plainText: string
   imageUrls: string[]
   threeSpeakUrls: Array<{ url: string; author: string; permlink: string }>
+  /** 3Speak audio URLs for iframe embed (audio.3speak.tv/play?a=...) */
+  threeSpeakAudioUrls: string[]
   twitterStatusIds: string[]
   youtubeVideoIds: string[]
 }
@@ -63,6 +69,17 @@ function extract3SpeakUrls(text: string): Array<{ url: string; author: string; p
   return out
 }
 
+function extract3SpeakAudioUrls(text: string): string[] {
+  const urls: string[] = []
+  let m: RegExpExecArray | null
+  const re = new RegExp(THREE_SPEAK_AUDIO_REGEX.source, 'gi')
+  while ((m = re.exec(text)) !== null) {
+    const url = m[0]!.trim()
+    if (url && !urls.includes(url)) urls.push(url)
+  }
+  return urls
+}
+
 /** Strip markdown to plain text; remove image syntax, replace links with link text, strip formatting. */
 function markdownToPlainText(markdown: string): string {
   if (!markdown || typeof markdown !== 'string') return ''
@@ -90,22 +107,28 @@ function markdownToPlainText(markdown: string): string {
   return s
 }
 
-/** Remove media URLs from text so we don't show raw URL when we show embed. */
+/** Remove media URLs from text so we don't show raw URL when we show embed. Replaces each URL with a single space, then collapses runs of spaces. */
 function stripMediaUrlsFromText(
   text: string,
   threeSpeakUrls: string[],
+  threeSpeakAudioUrls: string[],
   twitterIds: string[],
   youtubeIds: string[]
 ): string {
   let s = text
   for (const url of threeSpeakUrls) {
-    s = s.split(url).join('')
+    s = s.split(url).join(' ')
+  }
+  for (const url of threeSpeakAudioUrls) {
+    s = s.split(url).join(' ')
   }
   const twitterPattern = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/gi
-  s = s.replace(twitterPattern, '')
+  s = s.replace(twitterPattern, ' ')
   const youtubePattern =
     /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[^&\s]+|https?:\/\/youtu\.be\/[^?\s]+|https?:\/\/(?:www\.)?youtube\.com\/shorts\/[^?\s]+/gi
-  s = s.replace(youtubePattern, '')
+  s = s.replace(youtubePattern, ' ')
+  s = s.replace(THREE_SPEAK_AUDIO_REGEX, ' ')
+  s = s.replace(/\s{2,}/g, ' ')
   s = s.replace(/\n\s*\n\s*\n/g, '\n\n').trim()
   return s
 }
@@ -123,12 +146,13 @@ function extractStandaloneImageUrls(body: string): string[] {
   return urls
 }
 
-/** Remove standalone image URLs from text so they only appear in the image carousel. */
+/** Remove image URLs from text when they are shown in the carousel (no raw URL below thumb). */
 function stripStandaloneImageUrlsFromText(text: string, imageUrls: string[]): string {
   let s = text
   for (const url of imageUrls) {
     s = s.split(url).join(' ')
   }
+  s = s.replace(/\s{2,}/g, ' ')
   s = s.replace(/\n\s*\n\s*\n/g, '\n\n').trim()
   return s
 }
@@ -180,20 +204,23 @@ export function parsePostBody(post: NormalizedPost): ParsedPostBody {
 
   const twitterStatusIds = extractTwitterIds(body)
   const youtubeVideoIds = extractYoutubeIds(body)
+  const threeSpeakAudioUrls = extract3SpeakAudioUrls(body)
 
   let plainText = markdownToPlainText(body)
   plainText = stripMediaUrlsFromText(
     plainText,
     threeSpeakUrls.map((x) => x.url),
+    threeSpeakAudioUrls,
     twitterStatusIds,
     youtubeVideoIds
   )
-  plainText = stripStandaloneImageUrlsFromText(plainText, standaloneImageUrls)
+  plainText = stripStandaloneImageUrlsFromText(plainText, imageUrls)
 
   return {
     plainText,
     imageUrls,
     threeSpeakUrls,
+    threeSpeakAudioUrls,
     twitterStatusIds,
     youtubeVideoIds,
   }

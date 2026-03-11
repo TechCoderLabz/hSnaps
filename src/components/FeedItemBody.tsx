@@ -100,6 +100,20 @@ function YoutubeEmbed({ id }: { id: string }) {
   )
 }
 
+/** 3Speak audio: simple iframe to audio.3speak.tv/play. */
+function ThreeSpeakAudioEmbed({ url }: { url: string }) {
+  return (
+    <div className="my-3 overflow-hidden rounded-lg border border-[#3a424a] bg-[#1a1d21]">
+      <iframe
+        src={url}
+        title="3Speak audio"
+        className="h-24 w-full border-0"
+        allow="autoplay"
+      />
+    </div>
+  )
+}
+
 function TwitterEmbed({ id }: { id: string }) {
   const [active, setActive] = useState(false)
   const videoKey = `twitter:${id}`
@@ -200,6 +214,10 @@ export function ParsedBodyContent({
 
       {parsed.threeSpeakUrls.map(({ author, permlink }) => (
         <ThreeSpeakPlayer key={`${author}/${permlink}`} author={author} permlink={permlink} />
+      ))}
+
+      {parsed.threeSpeakAudioUrls.map((url) => (
+        <ThreeSpeakAudioEmbed key={url} url={url} />
       ))}
 
       {parsed.twitterStatusIds.map((id) => (
