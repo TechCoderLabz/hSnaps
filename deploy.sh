@@ -39,8 +39,4 @@ cd ..
 
 git add .
 git commit -m "Updated version"
-git push origin main
-
-git add .
-git commit -m "Updated version"
-git push origin main
+git push origin master
