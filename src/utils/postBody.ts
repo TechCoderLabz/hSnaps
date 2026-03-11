@@ -250,11 +250,14 @@ export function isImageUrl(url: string): boolean {
 }
 /** Hashtag: # followed by word chars (letters, numbers, underscore). */
 const HASHTAG_REGEX = /#([a-zA-Z0-9_]+)/g
+/** Mention: @ followed by username (letters, numbers, dot, underscore; Hive-style 2–16 chars). */
+const MENTION_REGEX = /@([a-zA-Z0-9._]{2,16})\b/g
 
 export type TextSegment =
   | { type: 'text'; value: string }
   | { type: 'link'; url: string }
   | { type: 'hashtag'; tag: string }
+  | { type: 'mention'; username: string }
 
 function splitTextByHashtags(text: string): Array<{ type: 'text'; value: string } | { type: 'hashtag'; tag: string }> {
   const out: Array<{ type: 'text'; value: string } | { type: 'hashtag'; tag: string }> = []
@@ -267,6 +270,25 @@ function splitTextByHashtags(text: string): Array<{ type: 'text'; value: string 
       out.push({ type: 'text', value: text.slice(lastIndex, m.index) })
     }
     out.push({ type: 'hashtag', tag })
+    lastIndex = re.lastIndex
+  }
+  if (lastIndex < text.length) {
+    out.push({ type: 'text', value: text.slice(lastIndex) })
+  }
+  return out.length > 0 ? out : [{ type: 'text', value: text }]
+}
+
+function splitTextByMentions(text: string): Array<{ type: 'text'; value: string } | { type: 'mention'; username: string }> {
+  const out: Array<{ type: 'text'; value: string } | { type: 'mention'; username: string }> = []
+  let lastIndex = 0
+  const re = new RegExp(MENTION_REGEX.source, 'g')
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    const username = m[1]!
+    if (m.index > lastIndex) {
+      out.push({ type: 'text', value: text.slice(lastIndex, m.index) })
+    }
+    out.push({ type: 'mention', username })
     lastIndex = re.lastIndex
   }
   if (lastIndex < text.length) {
@@ -302,7 +324,14 @@ export function plainTextToSegments(plainText: string): TextSegment[] {
     if (seg.type === 'link') {
       segments.push(seg)
     } else if (seg.type === 'text') {
-      segments.push(...splitTextByHashtags(seg.value))
+      const withHashtags = splitTextByHashtags(seg.value)
+      for (const sub of withHashtags) {
+        if (sub.type === 'hashtag') {
+          segments.push(sub)
+        } else {
+          segments.push(...splitTextByMentions(sub.value))
+        }
+      }
     } else {
       segments.push(seg)
     }

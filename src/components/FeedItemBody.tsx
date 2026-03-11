@@ -45,6 +45,17 @@ function HashtagSegment({ tag }: { tag: string }) {
   )
 }
 
+function MentionSegment({ username }: { username: string }) {
+  return (
+    <Link
+      to={`/user/${encodeURIComponent(username)}`}
+      className="text-[#e31337] underline hover:text-[#c51231]"
+    >
+      @{username}
+    </Link>
+  )
+}
+
 function YoutubeEmbed({ id }: { id: string }) {
   const [active, setActive] = useState(false)
   const videoKey = `youtube:${id}`
@@ -205,8 +216,10 @@ export function ParsedBodyContent({
               </span>
             ) : seg.type === 'link' ? (
               <LinkSegment key={i} url={seg.url} />
-            ) : (
+            ) : seg.type === 'hashtag' ? (
               <HashtagSegment key={i} tag={seg.tag} />
+            ) : (
+              <MentionSegment key={i} username={seg.username} />
             )
           )}
         </div>
