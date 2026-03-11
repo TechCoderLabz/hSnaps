@@ -133,6 +133,59 @@ export function useHiveOperations() {
     [username, getPrivatePostingKey, ensureProgrammaticAuth, aioha]
   );
 
+  /** Post the same body to multiple feeds in one transaction (one comment op per feed). */
+  const commentToMultipleFeeds = useCallback(
+    async (
+      items: Array<{ parentAuthor: string; parentPermlink: string; jsonMetadata: string }>,
+      body: string,
+      title?: string
+    ) => {
+      if (!username) throw new Error("User not authenticated");
+      if (!aioha) throw new Error("Wallet not available");
+      if (items.length === 0) throw new Error("No feeds selected");
+      setLoading(true);
+      setError(null);
+      try {
+        if (getPrivatePostingKey()) {
+          await ensureProgrammaticAuth();
+        }
+        const operations = items.map(
+          ({ parentAuthor, parentPermlink, jsonMetadata }) =>
+            [
+              "comment",
+              {
+                parent_author: parentAuthor,
+                parent_permlink: parentPermlink,
+                author: username,
+                permlink: generateRandomPermlink(8),
+                title: title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim()),
+                body,
+                json_metadata: jsonMetadata,
+              },
+            ] as const
+        );
+        const result = await aioha.signAndBroadcastTx(operations as any, KeyTypes.Posting);
+        if (!result.success) {
+          throw new Error("Multi-feed post failed");
+        }
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to post to feeds";
+        setError(errorMessage);
+        if (
+          !errorMessage.toLowerCase().includes("cancel") &&
+          !errorMessage.toLowerCase().includes("reject")
+        ) {
+          toast.error(errorMessage);
+        }
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [username, getPrivatePostingKey, ensureProgrammaticAuth, aioha]
+  );
+
   const voteAndComment = useCallback(
     async (
       parentAuthor: string,
@@ -208,6 +261,7 @@ export function useHiveOperations() {
   return {
     vote,
     comment,
+    commentToMultipleFeeds,
     voteAndComment,
     loading,
     error,

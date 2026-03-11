@@ -3,7 +3,8 @@
  */
 import type { NormalizedPost } from './types'
 
-const MARKDOWN_IMG_REGEX = /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g
+/** Capture markdown image URL; [^)]+ allows query string and avoids cutting at & or space */
+const MARKDOWN_IMG_REGEX = /!\[[^\]]*\]\s*\((https?:\/\/[^)]+)\)/g
 
 function getMetadataImages(jsonMetadata: string | undefined): string[] {
   if (!jsonMetadata || typeof jsonMetadata !== 'string') return []

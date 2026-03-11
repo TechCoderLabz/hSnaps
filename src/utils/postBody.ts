@@ -85,8 +85,8 @@ function markdownToPlainText(markdown: string): string {
   if (!markdown || typeof markdown !== 'string') return ''
   let s = markdown
   s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  // Remove image syntax
-  s = s.replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+  // Remove image syntax (allow optional spaces; URL can contain newlines so use [\s\S]*?)
+  s = s.replace(/!\s*\[[^\]]*\]\s*\([\s\S]*?\)/g, '')
   // Replace [text](url) with just text
   s = s.replace(/\[([^\]]*)\]\([^)]+\)/g, (_, text: string) => (text || '').trim())
   // Strip bold/italic/code
@@ -124,8 +124,9 @@ function stripMediaUrlsFromText(
   }
   const twitterPattern = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/gi
   s = s.replace(twitterPattern, ' ')
+  /* Match full YouTube URL including query string (?si=...) so no fragment is left in plain text */
   const youtubePattern =
-    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[^&\s]+|https?:\/\/youtu\.be\/[^?\s]+|https?:\/\/(?:www\.)?youtube\.com\/shorts\/[^?\s]+/gi
+    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[^\s]+|https?:\/\/youtu\.be\/[^\s]+|https?:\/\/(?:www\.)?youtube\.com\/shorts\/[^\s]+/gi
   s = s.replace(youtubePattern, ' ')
   s = s.replace(THREE_SPEAK_AUDIO_REGEX, ' ')
   s = s.replace(/\s{2,}/g, ' ')
