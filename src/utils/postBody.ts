@@ -33,6 +33,8 @@ export interface ParsedPostBody {
   threeSpeakAudioUrls: string[]
   /** Direct audio file URLs (mp3, wav, ogg, etc.) for HTML5 audio player */
   audioFileUrls: string[]
+  /** Video aspect ratio from json_metadata (e.g. '16/9' or '9/16') */
+  videoAspectRatio?: string
   twitterStatusIds: string[]
   youtubeVideoIds: string[]
 }
@@ -188,16 +190,18 @@ export function parsePostBody(post: NormalizedPost): ParsedPostBody {
 
   const threeSpeakFromBody = extract3SpeakUrls(body)
   const threeSpeakFromMeta: Array<{ url: string; author: string; permlink: string }> = []
+  let videoAspectRatio: string | undefined
 
   if (post.json_metadata && typeof post.json_metadata === 'string') {
     try {
       const meta = JSON.parse(post.json_metadata) as {
-        video?: { url?: string } | Record<string, unknown>
+        video?: { url?: string; aspectRatio?: string } | Record<string, unknown>
       }
-      const videoUrl =
-        meta.video && typeof meta.video === 'object'
-          ? (meta.video as { url?: string }).url
-          : undefined
+      const videoObj = meta.video && typeof meta.video === 'object' ? meta.video as { url?: string; aspectRatio?: string } : undefined
+      if (videoObj?.aspectRatio && typeof videoObj.aspectRatio === 'string') {
+        videoAspectRatio = videoObj.aspectRatio
+      }
+      const videoUrl = videoObj?.url
       if (typeof videoUrl === 'string' && videoUrl.includes('3speak.tv')) {
         const parsed = parse3SpeakUrl(videoUrl)
         if (parsed) {
@@ -244,6 +248,7 @@ export function parsePostBody(post: NormalizedPost): ParsedPostBody {
     threeSpeakUrls,
     threeSpeakAudioUrls,
     audioFileUrls,
+    videoAspectRatio,
     twitterStatusIds,
     youtubeVideoIds,
   }
