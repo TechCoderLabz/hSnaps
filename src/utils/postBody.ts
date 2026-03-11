@@ -31,6 +31,8 @@ export interface ParsedPostBody {
   threeSpeakUrls: Array<{ url: string; author: string; permlink: string }>
   /** 3Speak audio URLs for iframe embed (audio.3speak.tv/play?a=...) */
   threeSpeakAudioUrls: string[]
+  /** Direct audio file URLs (mp3, wav, ogg, etc.) for HTML5 audio player */
+  audioFileUrls: string[]
   twitterStatusIds: string[]
   youtubeVideoIds: string[]
 }
@@ -134,6 +136,19 @@ function stripMediaUrlsFromText(
   return s
 }
 
+/** Extract bare audio file URLs from body (e.g. https://example.com/audio.mp3). */
+function extractAudioFileUrls(body: string): string[] {
+  if (!body || typeof body !== 'string') return []
+  const urls: string[] = []
+  let m: RegExpExecArray | null
+  const re = new RegExp(ANY_URL_REGEX.source, 'gi')
+  while ((m = re.exec(body)) !== null) {
+    const url = m[0]?.trim()
+    if (url && isAudioUrl(url) && !urls.includes(url)) urls.push(url)
+  }
+  return urls
+}
+
 /** Extract bare image URLs from body (e.g. https://img.leopedia.io/.../image.png) for the carousel. */
 function extractStandaloneImageUrls(body: string): string[] {
   if (!body || typeof body !== 'string') return []
@@ -206,6 +221,7 @@ export function parsePostBody(post: NormalizedPost): ParsedPostBody {
   const twitterStatusIds = extractTwitterIds(body)
   const youtubeVideoIds = extractYoutubeIds(body)
   const threeSpeakAudioUrls = extract3SpeakAudioUrls(body)
+  const audioFileUrls = extractAudioFileUrls(body)
 
   let plainText = markdownToPlainText(body)
   plainText = stripMediaUrlsFromText(
@@ -216,12 +232,18 @@ export function parsePostBody(post: NormalizedPost): ParsedPostBody {
     youtubeVideoIds
   )
   plainText = stripStandaloneImageUrlsFromText(plainText, imageUrls)
+  // Strip audio file URLs from plain text so they render as player instead
+  for (const url of audioFileUrls) {
+    plainText = plainText.split(url).join(' ')
+  }
+  plainText = plainText.replace(/\s{2,}/g, ' ').replace(/\n\s*\n\s*\n/g, '\n\n').trim()
 
   return {
     plainText,
     imageUrls,
     threeSpeakUrls,
     threeSpeakAudioUrls,
+    audioFileUrls,
     twitterStatusIds,
     youtubeVideoIds,
   }
@@ -235,6 +257,15 @@ export function parseBodyFromMarkdown(body: string, jsonMetadata?: string): Pars
 
 /** URL pattern for link detection in plain text (no media embeds). */
 const LINK_URL_REGEX = /\bhttps?:\/\/[^\s<>)\]]+/gi
+
+/** Common audio file extensions (case-insensitive). */
+const AUDIO_EXT = /\.(mp3|wav|ogg|m4a|aac|flac|webm|opus)(\?|$)/i
+
+/** Whether a URL is likely an audio file (by extension). */
+export function isAudioUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false
+  return AUDIO_EXT.test(url.trim())
+}
 
 /** Common image file extensions (case-insensitive). */
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i
