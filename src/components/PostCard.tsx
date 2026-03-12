@@ -13,6 +13,7 @@ import { AddBookmarkButton } from './AddBookmarkButton'
 import { FeedItemOptions } from './FeedItemOptions'
 import { FeedItemBody } from './FeedItemBody'
 import { VoteSlider } from './comments/VoteSlider'
+import { PollView, parsePollFromMetadata } from './PollView'
 import { contentHas3SpeakEmbed } from '../utils/3speak'
 import { getDiscussion } from '../services/hiveService'
 import type { NormalizedPost } from '../utils/types'
@@ -292,6 +293,8 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     navigate(`/user/@${post.author}`)
   }
 
+  const pollData = useMemo(() => parsePollFromMetadata(post.json_metadata), [post.json_metadata])
+
   const actionBtnClass =
     'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8]'
 
@@ -336,6 +339,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           post={post}
           hideImages={contentHas3SpeakEmbed(post.body, post.json_metadata)}
         />
+        {pollData && <PollView poll={pollData} author={post.author} permlink={post.permlink} />}
       </div>
 
       {/* Action bar */}

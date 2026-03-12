@@ -9,7 +9,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:audio.3speak.tv)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -37,4 +37,12 @@ export const SUPPORTERS = [
     buttonText: 'View',
     color: 'bg-[#e31337] hover:bg-[#c51231]',
   },
+  {
+    title: 'Inspired by @peakd\'s Snaps',
+    description: 'Great Dev @asgarth\'s Peakd-Snaps',
+    avatar: 'https://images.ecency.com/webp/u/asgarth/avatar/medium',
+    link: 'https://peakd.com/@asgarth',
+    buttonText: 'View',
+    color: 'bg-blue-600 hover:bg-blue-700',
+  },
 ] as const

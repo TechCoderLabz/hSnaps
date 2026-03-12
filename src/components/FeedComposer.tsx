@@ -15,6 +15,8 @@ import AudioUploader from './AudioUploader'
 import VideoUploader from './VideoUploader'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
 import { parse3SpeakUrl } from '../utils/3speak'
+import PollCreator from './PollCreator'
+import type { PollData } from './PollCreator'
 import type { FeedType } from '../utils/types'
 import { FEED_CHAR_LIMITS } from '../utils/types'
 
@@ -49,6 +51,7 @@ function buildJsonMetadataForFeed(
   body: string,
   audioInfo?: { url: string; duration: number } | null,
   videoInfo?: { url: string; uploadUrl: string; aspectRatio?: string } | null,
+  pollData?: PollData | null,
 ): string {
   const images = extractImageUrlsFromMarkdown(body)
   const now = new Date()
@@ -58,6 +61,20 @@ function buildJsonMetadataForFeed(
     : {}
   const videoMeta = videoInfo
     ? { video: { platform: '3speak', url: videoInfo.url, uploadUrl: videoInfo.uploadUrl, aspectRatio: videoInfo.aspectRatio || '9/16' } }
+    : {}
+  const pollMeta = pollData
+    ? {
+        content_type: 'poll' as const,
+        version: 0.8,
+        question: pollData.question,
+        choices: pollData.choices,
+        preferred_interpretation: 'number_of_votes' as const,
+        end_time: pollData.end_time,
+        max_choices_voted: pollData.max_choices_voted,
+        allow_vote_changes: pollData.allow_vote_changes,
+        filters: pollData.filters,
+        ui_hide_res_until_voted: pollData.ui_hide_res_until_voted,
+      }
     : {}
 
   switch (feedType) {
@@ -69,6 +86,7 @@ function buildJsonMetadataForFeed(
         ...(images.length > 0 && { image: images }),
         ...audioMeta,
         ...videoMeta,
+        ...pollMeta,
       })
     case 'waves':
       return JSON.stringify({
@@ -82,6 +100,7 @@ function buildJsonMetadataForFeed(
         links: [],
         ...audioMeta,
         ...videoMeta,
+        ...pollMeta,
       })
     case 'threads':
       return JSON.stringify({
@@ -94,6 +113,7 @@ function buildJsonMetadataForFeed(
         format: 'markdown',
         ...audioMeta,
         ...videoMeta,
+        ...pollMeta,
       })
     case 'moments':
       return JSON.stringify({
@@ -103,6 +123,7 @@ function buildJsonMetadataForFeed(
         tags: ['moments'],
         ...audioMeta,
         ...videoMeta,
+        ...pollMeta,
       })
     default:
       return JSON.stringify({
@@ -112,6 +133,7 @@ function buildJsonMetadataForFeed(
         format: 'markdown',
         ...audioMeta,
         ...videoMeta,
+        ...pollMeta,
       })
   }
 }
@@ -139,15 +161,6 @@ export function FeedComposer({
 }: FeedComposerProps) {
   const { isAuthenticated } = useAuthData()
   const { comment } = useHiveOperations()
-  if (!isAuthenticated) return null
-
-  const composeSingleFeedMode = Boolean(containerRefs && selectedFeed)
-  const effectiveFeed = composeSingleFeedMode ? selectedFeed! : feedType
-  const limit = replyMode
-    ? REPLY_CHAR_LIMIT
-    : FEED_CHAR_LIMITS[effectiveFeed]
-  const containerRef = composeSingleFeedMode ? containerRefs?.[effectiveFeed] : null
-  const hasActiveFeed = !composeSingleFeedMode || Boolean(containerRef)
   const [body, setBody] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const [isGiphyOpen, setIsGiphyOpen] = useState(false)
@@ -159,7 +172,19 @@ export function FeedComposer({
   const [videoUploadUrl, setVideoUploadUrl] = useState<string | null>(null)
   const [videoAspectRatio, setVideoAspectRatio] = useState('16/9')
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
+  const [pollData, setPollData] = useState<PollData | null>(null)
+  const [isPollOpen, setIsPollOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  if (!isAuthenticated) return null
+
+  const composeSingleFeedMode = Boolean(containerRefs && selectedFeed)
+  const effectiveFeed = composeSingleFeedMode ? selectedFeed! : feedType
+  const limit = replyMode
+    ? REPLY_CHAR_LIMIT
+    : FEED_CHAR_LIMITS[effectiveFeed]
+  const containerRef = composeSingleFeedMode ? containerRefs?.[effectiveFeed] : null
+  const hasActiveFeed = !composeSingleFeedMode || Boolean(containerRef)
 
   const insertAtCursor = useCallback(
     (before: string, after = '') => {
@@ -276,13 +301,13 @@ export function FeedComposer({
         : null
 
       if (composeSingleFeedMode && containerRef) {
-        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, audioInfo, videoInfo)
+        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, audioInfo, videoInfo, pollData)
         await comment(containerRef.author, containerRef.permlink, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       } else {
         const jsonMetadata = replyMode
           ? JSON.stringify({ tags: [] as string[], app: 'hsnaps/1.0.0', format: 'markdown' })
-          : buildJsonMetadataForFeed(feedType, finalBody, audioInfo, videoInfo)
+          : buildJsonMetadataForFeed(feedType, finalBody, audioInfo, videoInfo, pollData)
         await comment(parentAuthor!, parentPermlink!, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       }
@@ -294,6 +319,7 @@ export function FeedComposer({
       setVideoUploadUrl(null)
       setVideoAspectRatio('16/9')
       setVideoPreviewUrl(null)
+      setPollData(null)
       onSuccess?.()
     } catch {
       // error toast already shown by useHiveOperations
@@ -339,6 +365,20 @@ export function FeedComposer({
           <button type="button" onClick={() => setIsGiphyOpen(true)} className="px-2 py-1.5 rounded-lg hover:bg-[#2f353d] text-[#c8cad6] text-xs font-semibold" title="GIF">
             GIF
           </button>
+          {!replyMode && (
+            <button
+              type="button"
+              onClick={() => setIsPollOpen(true)}
+              className={`p-2 rounded-lg hover:bg-[#2f353d] text-sm transition-colors ${pollData ? 'text-[#e31337]' : 'text-[#c8cad6]'}`}
+              title={pollData ? 'Edit poll' : 'Add poll'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <rect x="3" y="3" width="4" height="18" rx="1" />
+                <rect x="10" y="8" width="4" height="13" rx="1" />
+                <rect x="17" y="5" width="4" height="16" rx="1" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {showPreview && body.trim() && (
@@ -447,6 +487,54 @@ export function FeedComposer({
               </div>
           )}
 
+          {pollData && (
+            <div className="mt-2 rounded-xl border border-[#3a424a] bg-[#1a1d21] overflow-hidden">
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 text-[#e31337]">
+                    <rect x="3" y="3" width="4" height="18" rx="1" />
+                    <rect x="10" y="8" width="4" height="13" rx="1" />
+                    <rect x="17" y="5" width="4" height="16" rx="1" />
+                  </svg>
+                  <span className="flex-1 truncate text-xs font-medium text-[#f0f0f8]">
+                    {pollData.question}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsPollOpen(true)}
+                    className="shrink-0 rounded p-0.5 text-[#9ca3b0] hover:bg-[#3a424a] hover:text-[#f0f0f8]"
+                    title="Edit poll"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPollData(null)}
+                    className="shrink-0 rounded p-0.5 text-[#9ca3b0] hover:bg-[#3a424a] hover:text-red-400"
+                    title="Remove poll"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-3.5 w-3.5">
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {pollData.choices.map((c, i) => (
+                    <span key={i} className="rounded-full bg-[#2f353d] px-2 py-0.5 text-xs text-[#c8cad6]">
+                      {c}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-1.5 text-[10px] text-[#9ca3b0]">
+                  Ends {new Date(pollData.end_time * 1000).toLocaleDateString()} &middot; Max {pollData.max_choices_voted} choice{pollData.max_choices_voted > 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className={`text-xs ${over ? 'text-red-400' : 'text-[#9ca3b0]'}`}>
@@ -495,6 +583,13 @@ export function FeedComposer({
           </div>
         </div>
       )}
+
+      <PollCreator
+        isOpen={isPollOpen}
+        onClose={() => setIsPollOpen(false)}
+        onSave={(poll) => setPollData(poll)}
+        initialData={pollData}
+      />
     </div>
   )
 }
