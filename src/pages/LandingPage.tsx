@@ -149,6 +149,14 @@ export function LandingPage() {
             >
               See features
             </a>
+            <a
+              href="https://ecency.com/signup"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl border border-[#505863] px-6 py-3 text-base font-medium text-[#e7e7f1] transition hover:border-[#e31337] hover:text-white"
+            >
+              Sign Up
+            </a>
           </div>
           {isWeb && (
             <div className="mt-6 flex flex-wrap items-center justify-center gap-6">
