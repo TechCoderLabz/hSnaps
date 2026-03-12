@@ -12,6 +12,9 @@ import { ParsedBodyContent } from './FeedItemBody'
 import GiphyPicker from './GiphyPicker'
 import ImageUploader from './ImageUploader'
 import AudioUploader from './AudioUploader'
+import VideoUploader from './VideoUploader'
+import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
+import { parse3SpeakUrl } from '../utils/3speak'
 import type { FeedType } from '../utils/types'
 import { FEED_CHAR_LIMITS } from '../utils/types'
 
@@ -45,12 +48,16 @@ function buildJsonMetadataForFeed(
   feedType: FeedType,
   body: string,
   audioInfo?: { url: string; duration: number } | null,
+  videoInfo?: { url: string; uploadUrl: string; aspectRatio?: string } | null,
 ): string {
   const images = extractImageUrlsFromMarkdown(body)
   const now = new Date()
   const wavesTag = `waves-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
   const audioMeta = audioInfo
     ? { audio: { platform: '3speak', url: audioInfo.url, duration: audioInfo.duration } }
+    : {}
+  const videoMeta = videoInfo
+    ? { video: { platform: '3speak', url: videoInfo.url, uploadUrl: videoInfo.uploadUrl, aspectRatio: videoInfo.aspectRatio || '9/16' } }
     : {}
 
   switch (feedType) {
@@ -61,6 +68,7 @@ function buildJsonMetadataForFeed(
         tags: ['hive-178315', 'snaps'],
         ...(images.length > 0 && { image: images }),
         ...audioMeta,
+        ...videoMeta,
       })
     case 'waves':
       return JSON.stringify({
@@ -73,6 +81,7 @@ function buildJsonMetadataForFeed(
         format: 'markdown+html',
         links: [],
         ...audioMeta,
+        ...videoMeta,
       })
     case 'threads':
       return JSON.stringify({
@@ -84,6 +93,7 @@ function buildJsonMetadataForFeed(
         dimensions: {},
         format: 'markdown',
         ...audioMeta,
+        ...videoMeta,
       })
     case 'moments':
       return JSON.stringify({
@@ -92,6 +102,7 @@ function buildJsonMetadataForFeed(
         image: images.length > 0 ? images : [],
         tags: ['moments'],
         ...audioMeta,
+        ...videoMeta,
       })
     default:
       return JSON.stringify({
@@ -100,6 +111,7 @@ function buildJsonMetadataForFeed(
         tags: ['hive-178315', 'snaps'],
         format: 'markdown',
         ...audioMeta,
+        ...videoMeta,
       })
   }
 }
@@ -143,6 +155,10 @@ export function FeedComposer({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [audioEmbedUrl, setAudioEmbedUrl] = useState<string | null>(null)
   const [audioDuration, setAudioDuration] = useState(0)
+  const [videoEmbedUrl, setVideoEmbedUrl] = useState<string | null>(null)
+  const [videoUploadUrl, setVideoUploadUrl] = useState<string | null>(null)
+  const [videoAspectRatio, setVideoAspectRatio] = useState('16/9')
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const insertAtCursor = useCallback(
@@ -188,6 +204,23 @@ export function FeedComposer({
     setAudioDuration(0)
   }
 
+  const insertVideo = (embedUrl: string, uploadUrl: string, aspectRatio: string, localFile?: File) => {
+    setVideoEmbedUrl(embedUrl)
+    setVideoUploadUrl(uploadUrl)
+    setVideoAspectRatio(aspectRatio)
+    if (localFile) {
+      setVideoPreviewUrl(URL.createObjectURL(localFile))
+    }
+  }
+
+  const removeVideo = () => {
+    if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl)
+    setVideoEmbedUrl(null)
+    setVideoUploadUrl(null)
+    setVideoAspectRatio('16/9')
+    setVideoPreviewUrl(null)
+  }
+
   const insertGif = (gifUrl: string) => {
     const el = textareaRef.current
     if (!el) return
@@ -226,30 +259,41 @@ export function FeedComposer({
     }
     setIsSubmitting(true)
     try {
-      // Append audio embed URL to body (matching reference: body += `\n${audioEmbedUrl}`)
+      // Append audio/video embed URLs to body (matching reference: body += `\n${url}`)
       let finalBody = body.trim()
       if (audioEmbedUrl) {
         finalBody += `\n${audioEmbedUrl}`
+      }
+      if (videoEmbedUrl) {
+        finalBody += `\n${videoEmbedUrl}`
       }
 
       const audioInfo = audioEmbedUrl
         ? { url: audioEmbedUrl, duration: audioDuration }
         : null
+      const videoInfo = videoEmbedUrl && videoUploadUrl
+        ? { url: videoEmbedUrl, uploadUrl: videoUploadUrl, aspectRatio: videoAspectRatio }
+        : null
 
       if (composeSingleFeedMode && containerRef) {
-        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, audioInfo)
+        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, audioInfo, videoInfo)
         await comment(containerRef.author, containerRef.permlink, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       } else {
         const jsonMetadata = replyMode
           ? JSON.stringify({ tags: [] as string[], app: 'hsnaps/1.0.0', format: 'markdown' })
-          : buildJsonMetadataForFeed(feedType, finalBody, audioInfo)
+          : buildJsonMetadataForFeed(feedType, finalBody, audioInfo, videoInfo)
         await comment(parentAuthor!, parentPermlink!, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       }
       setBody('')
       setAudioEmbedUrl(null)
       setAudioDuration(0)
+      if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl)
+      setVideoEmbedUrl(null)
+      setVideoUploadUrl(null)
+      setVideoAspectRatio('16/9')
+      setVideoPreviewUrl(null)
       onSuccess?.()
     } catch {
       // error toast already shown by useHiveOperations
@@ -288,6 +332,7 @@ export function FeedComposer({
           </button>
           <ImageUploader onImageUploaded={insertImage} disabled={isSubmitting} />
           <AudioUploader onAudioUploaded={insertAudio} disabled={isSubmitting} />
+          <VideoUploader onVideoUploaded={insertVideo} disabled={isSubmitting} />
           <button type="button" onClick={() => setIsEmojiOpen(true)} className="p-2 rounded-lg hover:bg-[#2f353d] text-[#c8cad6] text-sm" title="Emoji">
             😀
           </button>
@@ -348,6 +393,58 @@ export function FeedComposer({
                 </button>
               </div>
             </div>
+          )}
+          {videoEmbedUrl && (
+              <div className="mt-2 rounded-xl border border-[#3a424a] bg-[#1a1d21] overflow-hidden">
+                {/* Native video preview using local file, or 3Speak iframe fallback */}
+                {videoPreviewUrl ? (
+                  <div className="overflow-hidden rounded-lg bg-black" style={{ maxHeight: '320px' }}>
+                    <video
+                      src={videoPreviewUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="mx-auto block"
+                      style={{ maxWidth: '100%', maxHeight: '320px' }}
+                    />
+                  </div>
+                ) : (() => {
+                  const parsed = parse3SpeakUrl(videoEmbedUrl)
+                  return parsed ? (
+                    <ThreeSpeakPlayer author={parsed.author} permlink={parsed.permlink} className="my-0" />
+                  ) : (
+                    <div style={{ aspectRatio: videoAspectRatio, maxHeight: '320px' }}>
+                      <iframe
+                        src={videoEmbedUrl}
+                        title="Video preview"
+                        className="h-full w-full border-0"
+                        allow="autoplay; fullscreen"
+                        allowFullScreen
+                      />
+                    </div>
+                  )
+                })()}
+                {/* Info bar with remove */}
+                <div className="flex items-center gap-2 border-t border-[#3a424a] px-3 py-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 text-[#e31337]">
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                  </svg>
+                  <span className="flex-1 truncate text-xs text-[#9ca3b0]">
+                    Video attached
+                  </span>
+                  <button
+                    type="button"
+                    onClick={removeVideo}
+                    className="shrink-0 rounded p-0.5 text-[#9ca3b0] hover:bg-[#3a424a] hover:text-red-400"
+                    title="Remove video"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-3.5 w-3.5">
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
           )}
 
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
