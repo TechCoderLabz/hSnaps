@@ -14,12 +14,14 @@ import { SettingsPage } from '../pages/SettingsPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
 import { CSAEStandardsPage } from '../pages/CSAEStandardsPage'
 import { UserProfilePage } from '../pages/UserProfilePage'
+import { AboutUsPage } from '../pages/AboutUsPage'
 
 export function AppRoutes() {
   const routes = useRoutes([
     { path: '/', element: <LandingPage /> },
     { path: '/privacy', element: <PrivacyPage /> },
     { path: '/csae-standards', element: <CSAEStandardsPage /> },
+    { path: '/about-us', element: <AboutUsPage /> },
     { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
     { path: '/tags/:tag', element: <TagFeedPage /> },
     { path: '/user/:username', element: <UserProfilePage /> },

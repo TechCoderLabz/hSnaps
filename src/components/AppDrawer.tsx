@@ -13,6 +13,7 @@ import {
   X,
   Home,
   ShieldCheck,
+  Info,
 } from 'lucide-react'
 import { useMobileFeedStore } from '../stores/mobileFeedStore'
 import { isMobilePlatform } from '../utils/platform-detection'
@@ -193,6 +194,16 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 >
                   <ShieldCheck className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
                   <span>Privacy Policy</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNav('/about-us')}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                >
+                  <Info className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                  <span>About Us</span>
                 </button>
               </li>
               <li>

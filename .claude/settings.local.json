@@ -10,7 +10,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:audio.3speak.tv)",
       "Bash(gh api:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(find /Users/sagar/projects/sagar/hSnaps -maxdepth 2 -not -path */node_modules* -not -path */.git* -not -path */dist* -type d)"
     ]
   }
 }
