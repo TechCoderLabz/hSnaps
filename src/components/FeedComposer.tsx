@@ -80,9 +80,9 @@ function buildJsonMetadataForFeed(
   switch (feedType) {
     case 'snaps':
       return JSON.stringify({
-        app: 'hivesnaps/1.0',
+        app: 'peakd/2026.3.1',
         developer: DEVELOPER,
-        tags: ['hive-178315', 'snaps'],
+        tags: ['hive-178315', 'snaps', 'hsnaps'],
         ...(images.length > 0 && { image: images }),
         ...audioMeta,
         ...videoMeta,
@@ -92,7 +92,7 @@ function buildJsonMetadataForFeed(
       return JSON.stringify({
         app: 'ecency/3.5.1-mobile',
         developer: DEVELOPER,
-        tags: [wavesTag],
+        tags: [wavesTag, 'hsnaps'],
         type: 'wave',
         ...(images.length > 0 && { image: images }),
         ...(images.length > 0 && { image_ratios: images.map(() => 1.17) }),
@@ -108,7 +108,7 @@ function buildJsonMetadataForFeed(
         developer: DEVELOPER,
         isPoll: false,
         pollOptions: {},
-        tags: ['leofinance'],
+        tags: ['leofinance', 'hsnaps'],
         dimensions: {},
         format: 'markdown',
         ...audioMeta,
@@ -120,16 +120,16 @@ function buildJsonMetadataForFeed(
         app: 'peakd/2026.3.1',
         developer: DEVELOPER,
         image: images.length > 0 ? images : [],
-        tags: ['moments'],
+        tags: ['moments', 'hsnaps'],
         ...audioMeta,
         ...videoMeta,
         ...pollMeta,
       })
     default:
       return JSON.stringify({
-        app: 'hivesnaps/1.0',
+        app: 'peakd/2026.3.1',
         developer: DEVELOPER,
-        tags: ['hive-178315', 'snaps'],
+        tags: ['hive-178315', 'snaps', 'hsnaps'],
         format: 'markdown',
         ...audioMeta,
         ...videoMeta,
@@ -305,9 +305,7 @@ export function FeedComposer({
         await comment(containerRef.author, containerRef.permlink, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       } else {
-        const jsonMetadata = replyMode
-          ? JSON.stringify({ tags: [] as string[], app: 'hsnaps/1.0.0', format: 'markdown' })
-          : buildJsonMetadataForFeed(feedType, finalBody, audioInfo, videoInfo, pollData)
+        const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, audioInfo, videoInfo, pollData)
         await comment(parentAuthor!, parentPermlink!, finalBody, '', jsonMetadata)
         toast.success('Posted successfully!')
       }

@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2, AlertCircle, MessageCirclePlus, RefreshCw } from 'l
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
-import type { NormalizedPost } from '../utils/types'
+import type { NormalizedPost, FeedType } from '../utils/types'
 import type { Discussion } from '../utils/commentTypes'
 import { getCommentsList } from '../services/commentService'
 import { getDiscussion, normalizeBridgePost } from '../services/hiveService'
@@ -19,6 +19,21 @@ import { ReplyComposerModal } from '../components/comments/ReplyComposerModal'
 function convertPercentageToWeight(percentage: number): number {
   const clamped = Math.max(0, Math.min(100, percentage))
   return Math.round(clamped * 100)
+}
+
+/** Detect the FeedType from a post's json_metadata app field. */
+function detectFeedTypeFromMetadata(jsonMetadata?: string): FeedType {
+  if (!jsonMetadata) return 'snaps'
+  try {
+    const parsed = JSON.parse(jsonMetadata)
+    const app = (parsed?.app ?? '').toLowerCase()
+    if (app.startsWith('ecency')) return 'waves'
+    if (app.startsWith('leothreads')) return 'threads'
+    if (app.startsWith('peakd')) return 'moments'
+    return 'snaps'
+  } catch {
+    return 'snaps'
+  }
 }
 
 export function PostCommentsPage() {
@@ -381,6 +396,7 @@ export function PostCommentsPage() {
                 : undefined
           }
           placeholder={replyingTo ? `Reply to @${replyingTo.author}...` : 'Add a comment...'}
+          feedType={detectFeedTypeFromMetadata(rootPost?.json_metadata)}
         />
       )}
     </section>
