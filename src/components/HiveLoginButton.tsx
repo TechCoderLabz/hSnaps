@@ -104,7 +104,7 @@ export const HiveLoginButton: React.FC = () => {
         return JSON.stringify(objectForAuth)
       }}
       theme='dark'
-      isActiveFieldVisible={true}
+      isActiveFieldVisible={false}
       shouldShowSwitchUser={true}
       loginButtonColors={LOGIN_BUTTON_COLORS}
     />
