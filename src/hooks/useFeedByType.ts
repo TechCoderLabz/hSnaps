@@ -91,3 +91,8 @@ export function useFeedByType(feedType: UnifiedFeedType) {
     posts: filteredPosts,
   }
 }
+
+/** Imperatively refresh a feed by type (for pull-to-refresh / reload button). */
+export function refreshFeed(feedType: UnifiedFeedType): Promise<void> {
+  return FETCH_BY_TYPE[feedType]()
+}
