@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 
 export function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#212529] text-[#f0f0f8]">
+    <div className="app-header-safe-area min-h-screen bg-[#212529] text-[#f0f0f8]">
       <div className="fixed inset-0 bg-gradient-to-br from-[#3a1118]/30 via-[#212529] to-[#2b3138] pointer-events-none" />
       <div className="relative mx-auto max-w-2xl px-4 py-12 sm:px-8 sm:py-16">
         <Link

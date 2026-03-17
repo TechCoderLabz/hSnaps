@@ -164,7 +164,7 @@ export function AboutUsPage() {
       <div className="fixed inset-0 bg-gradient-to-br from-[#3a1118]/45 via-[#212529] to-[#2b3138] pointer-events-none" />
       <div className="relative">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#3a424a] bg-[#212529] px-4">
+        <header className="app-header-safe-area sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#3a424a] bg-[#212529] px-4">
           <Link
             to="/"
             className="flex items-center gap-2 rounded-lg p-2 text-[#9ca3b0] transition hover:bg-[#2f353d] hover:text-[#f0f0f8]"

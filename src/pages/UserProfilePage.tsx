@@ -224,7 +224,7 @@ export function UserProfilePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#212529] text-[#f0f0f8]">
-      <header className="sticky top-0 z-20 border-b border-[#3a424a] bg-[#212529]/95 px-3 py-2.5 sm:px-6 sm:py-3">
+      <header className="app-header-safe-area sticky top-0 z-20 border-b border-[#3a424a] bg-[#212529]/95 px-3 py-2.5 sm:px-6 sm:py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button

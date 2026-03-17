@@ -79,7 +79,7 @@ export function TagFeedPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#212529] text-[#f0f0f8]">
-      <header className="sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-[#3a424a] bg-[#212529]/95 px-4 py-3 sm:px-6">
+      <header className="app-header-safe-area sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-[#3a424a] bg-[#212529]/95 px-4 py-3 sm:px-6">
         <Link
           to="/dashboard"
           className="rounded-lg px-2 py-1.5 text-sm text-[#9ca3b0] transition-colors hover:bg-[#3a424a] hover:text-[#f0f0f8]"
