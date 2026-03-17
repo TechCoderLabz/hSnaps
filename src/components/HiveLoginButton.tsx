@@ -19,8 +19,6 @@ export const HiveLoginButton: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
-
   // Ecency token: same shape as reference (signed_message, authors, timestamp, signatures = [challenge])
   const objectForAuthRef = useRef<{
     signed_message: { type: string; app: string }
@@ -28,16 +26,6 @@ export const HiveLoginButton: React.FC = () => {
     timestamp: string
     signatures?: string[]
   } | null>(null)
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const updateTheme = () => setTheme(mq.matches ? 'dark' : 'light')
-    updateTheme()
-    mq.addEventListener('change', updateTheme)
-    return () => {
-      mq.removeEventListener('change', updateTheme)
-    }
-  }, [])
 
   const handleAuthenticate = async (hiveResult: HiveAuthResult) => {
     try {
@@ -115,7 +103,7 @@ export const HiveLoginButton: React.FC = () => {
         objectForAuthRef.current = objectForAuth
         return JSON.stringify(objectForAuth)
       }}
-      theme={theme}
+      theme='dark'
       isActiveFieldVisible={true}
       shouldShowSwitchUser={true}
       loginButtonColors={LOGIN_BUTTON_COLORS}
