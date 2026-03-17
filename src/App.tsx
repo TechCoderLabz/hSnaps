@@ -4,6 +4,7 @@ import { AiohaProvider } from '@aioha/react-provider'
 import { initAioha } from '@aioha/aioha'
 import { AppRoutes } from './app/AppRoutes'
 import { AuthProvider } from './context/AuthContext'
+import { EulaGate } from './components/EulaGate'
 
 // Single Aioha instance configured similarly to the reference app
 const aioha = initAioha({
@@ -22,10 +23,12 @@ function App() {
   return (
     <AiohaProvider aioha={aioha}>
       <AuthProvider>
-        <HashRouter>
-          <AppRoutes />
-          <Toaster position="bottom-center" richColors closeButton />
-        </HashRouter>
+        <EulaGate>
+          <HashRouter>
+            <AppRoutes />
+            <Toaster position="bottom-center" richColors closeButton />
+          </HashRouter>
+        </EulaGate>
       </AuthProvider>
     </AiohaProvider>
   )

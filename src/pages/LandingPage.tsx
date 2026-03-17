@@ -47,6 +47,7 @@ import { FEED_AVATARS } from '../constants/feeds'
 import { SUPPORT_DISCORD_URL, VOTE_WITNESS_URL, SUPPORTERS } from '../constants/support'
 import type { FeedType } from '../utils/types'
 import { HiveToolbar } from 'hive-react-kit'
+import { openLink } from '../utils/openLink'
 
 const FEED_FEATURES: { title: string; desc: string; feedId: FeedType }[] = [
   { title: 'Snaps', desc: 'Short, punchy posts. PeakD-style snaps on Hive.', feedId: 'snaps' },
@@ -159,14 +160,13 @@ export function LandingPage() {
             >
               See features
             </a>
-            <a
-              href="https://ecency.com/signup"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => void openLink('https://ecency.com/signup')}
               className="rounded-xl border border-[#505863] px-6 py-3 text-base font-medium text-[#e7e7f1] transition hover:border-[#e31337] hover:text-white"
             >
               Sign Up
-            </a>
+            </button>
           </div>
           {isWeb && (
             <div className="mt-6 flex flex-wrap items-center justify-center gap-6">

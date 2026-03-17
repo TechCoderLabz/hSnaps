@@ -13,6 +13,7 @@ import { IgnoredPage } from '../pages/IgnoredPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
 import { CSAEStandardsPage } from '../pages/CSAEStandardsPage'
+import { EulaPage } from '../pages/EulaPage'
 import { UserProfilePage } from '../pages/UserProfilePage'
 import { AboutUsPage } from '../pages/AboutUsPage'
 
@@ -21,6 +22,7 @@ export function AppRoutes() {
     { path: '/', element: <LandingPage /> },
     { path: '/privacy', element: <PrivacyPage /> },
     { path: '/csae-standards', element: <CSAEStandardsPage /> },
+    { path: '/eula', element: <EulaPage /> },
     { path: '/about-us', element: <AboutUsPage /> },
     { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
     { path: '/tags/:tag', element: <TagFeedPage /> },
