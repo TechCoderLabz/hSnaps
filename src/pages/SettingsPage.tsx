@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { APP_VERSION } from '../config/appVersion'
 import { SUPPORT_DISCORD_URL, VOTE_WITNESS_URL, SUPPORTERS } from '../constants/support'
 import { useAuthData, useAppAuthStore } from '../stores/authStore'
+import { isIOS } from '../utils/platform-detection'
 
 const HD_API_SERVER =
   import.meta.env.VITE_HIVE_API_SERVER || 'https://hreplier-api.sagarkothari88.one'
@@ -172,7 +173,7 @@ export function SettingsPage() {
       ))}
 
       {/* Delete Account */}
-      {isAuthenticated && (
+      {isAuthenticated && isIOS() && (
         <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85 p-6">
           {!showDeleteConfirm ? (
             <button
