@@ -36,7 +36,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
-import { isMobilePlatform } from '../utils/platform-detection'
+import { isMobilePlatform, isIOS } from '../utils/platform-detection'
 import {
   APP_STORE_URL,
   PLAY_STORE_URL,
@@ -99,6 +99,7 @@ function scrollToSection(id: string) {
 
 export function LandingPage() {
   const isWeb = !isMobilePlatform()
+  const ios = isIOS()
   return (
     <div className="min-h-screen bg-[#212529] text-[#f0f0f8]">
       {/* Subtle gradient background */}
@@ -138,10 +139,12 @@ export function LandingPage() {
             </span>
           </h1>
           <p className="mt-4 text-2xl font-semibold tracking-tight text-[#e7e7f1] sm:text-3xl">
-            Share moments. Earn rewards.
+            {ios ? 'Share moments. Connect with others.' : 'Share moments. Earn rewards.'}
           </p>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-[#c8cad6]">
-            hSnaps brings social to the Hive blockchain. Share your moments, connect with others, and earn cryptocurrency rewards for your content.
+            {ios
+              ? 'hSnaps brings social to the Hive blockchain. Share your moments and connect with others.'
+              : 'hSnaps brings social to the Hive blockchain. Share your moments, connect with others, and earn cryptocurrency rewards for your content.'}
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -229,10 +232,12 @@ export function LandingPage() {
             All the features we offer
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-[#9ca3b0]">
-            Bookmarks, share, tipping, upvote, reply, comments, reblog, search users, ignored list, flagging, multi-account, GIF, preview, uploads, 3Speak, swipable images, tags &amp; more.
+            {ios
+              ? 'Bookmarks, share, upvote, reply, comments, reblog, search users, ignored list, flagging, multi-account, GIF, preview, uploads, 3Speak, swipable images, tags & more.'
+              : 'Bookmarks, share, tipping, upvote, reply, comments, reblog, search users, ignored list, flagging, multi-account, GIF, preview, uploads, 3Speak, swipable images, tags & more.'}
           </p>
           <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {ALL_FEATURES.map(({ label, icon: Icon }) => (
+            {ALL_FEATURES.filter(({ label }) => !ios || label !== 'Tipping').map(({ label, icon: Icon }) => (
               <div
                 key={label}
                 className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
@@ -252,10 +257,12 @@ export function LandingPage() {
             Why hSnaps
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-center text-[#9ca3b0]">
-            Social media on the blockchain. Post, connect, and earn—all in one place.
+            {ios
+              ? 'Social media on the blockchain. Post and connect—all in one place.'
+              : 'Social media on the blockchain. Post, connect, and earn—all in one place.'}
           </p>
           <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {HIGHLIGHTS.map(({ label, icon: Icon }) => (
+            {HIGHLIGHTS.filter(({ label }) => !ios || (label !== 'Earn crypto rewards' && label !== 'Markdown, media & tipping')).map(({ label, icon: Icon }) => (
               <div
                 key={label}
                 className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
