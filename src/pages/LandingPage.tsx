@@ -19,20 +19,12 @@ import {
   Film,
   LayoutGrid,
   Tag,
-  ExternalLink,
   Compass,
   Layers,
   Lightbulb,
   Info,
   Video,
   MessageSquare,
-  Eye,
-  Target,
-  Sparkles,
-  Code2,
-  Rocket,
-  CheckCircle2,
-  ArrowRight,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
@@ -44,9 +36,8 @@ import {
   PLAY_STORE_LOGO,
 } from '../constants/appStores'
 import { FEED_AVATARS } from '../constants/feeds'
-import { SUPPORT_DISCORD_URL, VOTE_WITNESS_URL, SUPPORTERS } from '../constants/support'
 import type { FeedType } from '../utils/types'
-import { HiveToolbar } from 'hive-react-kit'
+import { HiveContributionsLanding, HiveToolbar } from 'hive-react-kit'
 import { openLink } from '../utils/openLink'
 
 const FEED_FEATURES: { title: string; desc: string; feedId: FeedType }[] = [
@@ -276,237 +267,28 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Vision & Mission */}
-        <section className="border-t border-[#3a424a] bg-[#262b30]/40 px-4 py-16 sm:px-8">
-          <div className="mx-auto max-w-5xl">
-            <div className="grid gap-6 sm:grid-cols-2">
-              {/* Vision */}
-              <div className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2f353d] ring-1 ring-[#3a424a]">
-                  <Eye className="h-6 w-6 text-[#e31337]" aria-hidden />
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-[#f0f0f8]">Vision</h3>
-                <p className="mt-2 text-sm font-medium text-[#e7e7f1]">Make Hive accessible to the world through simple, powerful applications.</p>
-                <p className="mt-2 text-sm text-[#9ca3b0]">
-                  We aim to bridge the gap between traditional social apps and decentralized technologies by creating familiar, easy-to-use products.
-                </p>
-              </div>
-              {/* Mission */}
-              <div className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2f353d] ring-1 ring-[#3a424a]">
-                  <Target className="h-6 w-6 text-[#e31337]" aria-hidden />
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-[#f0f0f8]">Mission</h3>
-                <p className="mt-2 text-sm font-medium text-[#e7e7f1]">Build open, user-friendly applications that help Hive reach Web2 audiences.</p>
-                <p className="mt-2 text-sm text-[#9ca3b0]">
-                  Everything we build is open source and community driven.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* What We Believe */}
-        <section className="border-t border-[#3a424a] bg-[#262b30]/60 px-4 py-16 sm:px-8">
-          <h2 className="text-center text-2xl font-bold text-[#f0f0f8] sm:text-3xl">
-            What We Believe
-          </h2>
-          <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {([
-              { label: 'Simplicity Wins', desc: 'Blockchain technology should feel as easy as using any modern mobile app.', icon: Sparkles },
-              { label: 'Open Ecosystem', desc: 'All our apps are open source so developers can learn, extend, and build.', icon: Code2 },
-              { label: 'Build First, Talk Later', desc: 'We prefer shipping real products and improving with community feedback.', icon: Rocket },
-              { label: 'Community Over Ownership', desc: 'These are tools built for the entire Hive ecosystem, not closed platforms.', icon: Users },
-            ] as const).map(({ label, desc, icon: Icon }) => (
-              <div
-                key={label}
-                className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2f353d] ring-1 ring-[#3a424a]">
-                  <Icon className="h-6 w-6 text-[#e31337]" aria-hidden />
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-[#f0f0f8]">{label}</h3>
-                <p className="mt-2 text-sm text-[#9ca3b0]">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Apps We've Built */}
-        <section className="border-t border-[#3a424a] bg-[#262b30]/40 px-4 py-16 sm:px-8">
-          <h2 className="text-center text-2xl font-bold text-[#f0f0f8] sm:text-3xl">
-            Apps We&apos;ve Built &amp; What&apos;s Coming
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[#9ca3b0]">
-            We focus on building multiple specialized apps, each solving a specific problem.
-          </p>
-          <div className="mx-auto mt-12 max-w-5xl">
-            {/* Delivered */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {([
-                'Distriator', 'CheckInWithXYZ', 'hReplier', 'hStats', 'hPolls', 'hFestFacts',
-              ]).map((name) => (
-                <div
-                  key={name}
-                  className="flex items-center gap-3 rounded-2xl border border-[#3a424a] bg-[#262b30]/85 px-5 py-4 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
-                >
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" aria-hidden />
-                  <span className="font-medium text-[#f0f0f8]">{name}</span>
-                  <span className="ml-auto shrink-0 rounded-full border border-green-500/30 bg-green-500/20 px-2.5 py-0.5 text-[11px] font-medium text-green-400">
-                    Delivered
-                  </span>
-                </div>
-              ))}
-            </div>
-            {/* In Development */}
-            <p className="mt-8 mb-4 text-center text-sm font-medium uppercase tracking-wide text-[#9ca3b0]">In Development</p>
-            <div className="grid gap-4 sm:grid-cols-2 max-w-2xl mx-auto">
-              {([
-                { name: 'hApprover', desc: 'Approve Hive transactions from your phone' },
-                { name: 'hSnaps', desc: 'Short-form content inspired by Snapie & PeakD Snaps' },
-              ]).map((app) => (
-                <div
-                  key={app.name}
-                  className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 px-5 py-4 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-[#f0f0f8]">{app.name}</span>
-                    <span className="shrink-0 rounded-full border border-yellow-500/30 bg-yellow-500/20 px-2.5 py-0.5 text-[11px] font-medium text-yellow-400">
-                      In Dev
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-[#9ca3b0]">{app.desc}</p>
-                </div>
-              ))}
-            </div>
-            {/* Planned */}
-            <p className="mt-8 mb-4 text-center text-sm font-medium uppercase tracking-wide text-[#9ca3b0]">Planned</p>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {([
-                'hSurvey', 'hChat', 'hShorts', 'hVideos', 'hGovernance', 'hFind', 'hMarketPlace',
-              ]).map((name) => (
-                <div
-                  key={name}
-                  className="flex items-center gap-3 rounded-2xl border border-[#3a424a] bg-[#262b30]/85 px-5 py-4 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
-                >
-                  <span className="font-medium text-[#f0f0f8]">{name}</span>
-                  <span className="ml-auto shrink-0 rounded-full border border-blue-500/30 bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-medium text-blue-400">
-                    Planned
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Why We Build + Learn More */}
-          <div className="mx-auto mt-12 max-w-2xl text-center">
-            <p className="text-lg font-medium text-[#e7e7f1]">
-              Built without external funding, with passion for Hive, for the entire community, and completely open source.
-            </p>
-            <p className="mt-4 text-[#c8cad6]">
-              Our goal is simple: Help Hive grow by making it easier for Web2 users to discover and use.
-            </p>
-            <Link
-              to="/about-us"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#e31337] px-6 py-3 text-base font-semibold text-white shadow-lg shadow-[#e31337]/25 transition hover:bg-[#c51231]"
-            >
-              Learn more about us
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-          </div>
-        </section>
-
-        {/* About Us: Vote Us, supporters, Contact Support */}
-        <section id="about-us" className="border-t border-[#3a424a] bg-[#262b30]/60 px-4 py-16 sm:px-8">
-          <h2 className="text-center text-2xl font-bold text-[#f0f0f8] sm:text-3xl">
-            About Us
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[#9ca3b0]">
-            Vote for our witness, meet our supporters, and get in touch.
-          </p>
-          <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Vote Us */}
-            <div className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#2f353d] ring-1 ring-[#3a424a]">
-                <img
-                  src="https://images.hive.blog/u/sagarkothari88/avatar"
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <h3 className="mt-3 text-lg font-semibold text-[#f0f0f8]">Vote Us</h3>
-              <p className="mt-2 text-sm text-[#9ca3b0]">Support @sagarkothari88 on Hive</p>
-              <div className="mt-4">
-                <a
-                  href={VOTE_WITNESS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#e31337] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c51231]"
-                >
-                  Vote
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-            </div>
-
-            {/* Supporters */}
-            {SUPPORTERS.map((s, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#2f353d] ring-1 ring-[#3a424a]">
-                  <img src={s.avatar} alt="" className="h-full w-full object-cover" />
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-[#f0f0f8]">{s.title}</h3>
-                <p className="mt-2 text-sm text-[#9ca3b0]">{s.description}</p>
-                <div className="mt-4">
-                  <a
-                    href={s.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg bg-[#e31337] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c51231]"
-                  >
-                    {s.buttonText}
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </div>
-              </div>
-            ))}
-
-            {/* Contact Support */}
-            <a
-              href={SUPPORT_DISCORD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col rounded-2xl border border-[#3a424a] bg-[#262b30]/85 p-6 transition hover:border-[#e31337]/40 hover:bg-[#2b3138]"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#2f353d] ring-1 ring-[#3a424a]">
-                <img
-                  src="https://cdn.simpleicons.org/discord/5865F2"
-                  alt=""
-                  className="h-6 w-6"
-                  width={24}
-                  height={24}
-                />
-              </div>
-              <h3 className="mt-3 text-lg font-semibold text-[#f0f0f8]">Contact Support</h3>
-              <p className="mt-2 text-sm text-[#9ca3b0]">Get help on Discord</p>
-              <div className="mt-4">
-                <span className="inline-flex items-center gap-2 rounded-lg bg-[#e31337] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c51231]">
-                  Join
-                  <ExternalLink className="h-4 w-4" />
-                </span>
-              </div>
-            </a>
-          </div>
-        </section>
+        {/* Hive Contributions Landing Section */}
+        <div style={{ transform: "translateX(0)" }} className="bg-gradient-to-br from-[#3a1118]/45 via-[#212529] to-[#2b3138]">
+          <HiveContributionsLanding
+            backgroundColor="bg-gradient-to-br from-[#3a1118]/15 via-[#212529] to-[#2b3138]"
+            extraSupporters={
+              [
+                {
+                  title: 'Inspired by @peakd\'s Snaps',
+                  description: 'Great Dev @asgarth\'s Peakd-Snaps',
+                  avatar: 'https://images.ecency.com/webp/u/asgarth/avatar/medium',
+                  link: 'https://peakd.com/@asgarth',
+                  buttonText: 'View',
+                },
+              ]
+            } />
+        </div>
 
         <footer className="border-t border-[#3a424a] px-4 py-8 text-center text-sm text-[#9ca3b0] sm:px-8">
           <p>All Rights Reserved © 2026 hSnaps</p>
         </footer>
       </div>
-      <HiveToolbar isHsnaps={false} backgroundColor='#212529' borderTopColor='#3a424a' textColor='#f0f0f8'/>
+      <HiveToolbar isHsnaps={false} backgroundColor='#212529' borderTopColor='#3a424a' textColor='#f0f0f8' />
     </div>
   )
 }
