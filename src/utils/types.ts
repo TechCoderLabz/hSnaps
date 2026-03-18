@@ -10,9 +10,14 @@ export interface PostReference {
 }
 
 /** Normalized post after fetching full data via Hive RPC */
+/** Body text used to mark a post as deleted on-chain. Posts with this body are filtered from feeds. */
+export const DELETED_POST_BODY = 'post deleted by author'
+
 export interface NormalizedPost {
   author: string
   permlink: string
+  parent_author?: string
+  parent_permlink?: string
   title: string
   body: string
   created: string

@@ -133,6 +133,54 @@ export function useHiveOperations() {
     [username, getPrivatePostingKey, ensureProgrammaticAuth, aioha]
   );
 
+  /** Edit an existing post by broadcasting a comment with the same permlink. */
+  const editPost = useCallback(
+    async (
+      parentAuthor: string,
+      parentPermlink: string,
+      permlink: string,
+      body: string,
+      title?: string,
+      jsonMetadata?: string
+    ) => {
+      if (!username) throw new Error("User not authenticated");
+      if (!aioha) throw new Error("Wallet not available");
+      setLoading(true);
+      setError(null);
+      try {
+        if (getPrivatePostingKey()) {
+          await ensureProgrammaticAuth();
+        }
+        const commentTitle = title || "";
+        const result = await aioha.comment(
+          parentAuthor,
+          parentPermlink,
+          permlink,
+          commentTitle,
+          body,
+          jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" })
+        );
+        if (!result.success) {
+          throw new Error("Edit failed");
+        }
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to edit post";
+        setError(errorMessage);
+        if (
+          !errorMessage.toLowerCase().includes("cancel") &&
+          !errorMessage.toLowerCase().includes("reject")
+        ) {
+          toast.error(errorMessage);
+        }
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [username, getPrivatePostingKey, ensureProgrammaticAuth, aioha]
+  );
+
   /** Post the same body to multiple feeds in one transaction (one comment op per feed). */
   const commentToMultipleFeeds = useCallback(
     async (
@@ -261,6 +309,7 @@ export function useHiveOperations() {
   return {
     vote,
     comment,
+    editPost,
     commentToMultipleFeeds,
     voteAndComment,
     loading,

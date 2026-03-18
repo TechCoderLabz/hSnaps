@@ -18,6 +18,10 @@ export interface FeedState {
   fetchFeed: (signal?: AbortSignal) => Promise<void>
   loadMore: (signal?: AbortSignal) => Promise<void>
   reset: () => void
+  /** Locally update a post's body (optimistic edit). */
+  updatePostBody: (author: string, permlink: string, newBody: string) => void
+  /** Locally remove a post from the feed (optimistic delete). */
+  removePost: (author: string, permlink: string) => void
 }
 
 const initialState = {
@@ -83,5 +87,15 @@ export function createFeedStore(feedType: FeedType) {
       }
     },
     reset: () => set(initialState),
+    updatePostBody: (author: string, permlink: string, newBody: string) =>
+      set((s) => ({
+        posts: s.posts.map((p) =>
+          p.author === author && p.permlink === permlink ? { ...p, body: newBody } : p
+        ),
+      })),
+    removePost: (author: string, permlink: string) =>
+      set((s) => ({
+        posts: s.posts.filter((p) => !(p.author === author && p.permlink === permlink)),
+      })),
   }))
 }

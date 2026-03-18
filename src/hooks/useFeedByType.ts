@@ -89,6 +89,8 @@ export function useFeedByType(feedType: UnifiedFeedType) {
   return {
     ...state,
     posts: filteredPosts,
+    /** Unfiltered store posts (before my_feed/following filter). Use for time-range labels. */
+    allPosts: state.posts,
   }
 }
 

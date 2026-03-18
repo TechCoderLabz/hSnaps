@@ -1,9 +1,10 @@
 /**
  * Options menu for a feed item: Flag (opens ReportModal from hive-authentication).
+ * Edit/Delete shown only for posts authored by the logged-in user.
  * On report: add author to ignored, refetch feeds, optional callback (e.g. navigate away on detail page).
  */
 import { useState, useRef, useEffect } from 'react'
-import { MoreVertical, Flag } from 'lucide-react'
+import { MoreVertical, Flag, Pencil, Trash2 } from 'lucide-react'
 import { ReportModal } from 'hive-authentication'
 import { useAuthData } from '../stores/authStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
@@ -18,6 +19,10 @@ interface FeedItemOptionsProps {
   targetPermlink: string
   /** Called after report with the reported username (e.g. to navigate away if reporting root author on detail page). */
   onReportedAuthor?: (username: string) => void
+  /** Called when user clicks Edit on their own post. */
+  onEdit?: () => void
+  /** Called when user clicks Delete on their own post. */
+  onDelete?: () => void
   className?: string
   ariaLabel?: string
 }
@@ -26,15 +31,18 @@ export function FeedItemOptions({
   targetUsername,
   targetPermlink,
   onReportedAuthor,
+  onEdit,
+  onDelete,
   className = '',
   ariaLabel = 'Options',
 }: FeedItemOptionsProps) {
-  const { token, isAuthenticated } = useAuthData()
+  const { token, isAuthenticated, username } = useAuthData()
   const [menuOpen, setMenuOpen] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const addAuthor = useIgnoredAuthorsStore((s) => s.addAuthor)
+  const isOwnPost = Boolean(username && targetUsername === username)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -82,17 +90,45 @@ export function FeedItemOptions({
       </button>
       {menuOpen && (
         <div className="absolute right-0 top-full z-30 mt-1 min-w-[140px] rounded-xl border border-[#3a424a] bg-[#262b30] py-1 shadow-xl">
-          <button
-            type="button"
-            onClick={() => {
-              setMenuOpen(false)
-              setReportModalOpen(true)
-            }}
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#f0f0f8] transition-colors hover:bg-[#2f353d]"
-          >
-            <Flag className="h-4 w-4 text-[#9ca3b0]" />
-            Flag
-          </button>
+          {isOwnPost && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onEdit?.()
+                }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#f0f0f8] transition-colors hover:bg-[#2f353d]"
+              >
+                <Pencil className="h-4 w-4 text-[#9ca3b0]" />
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onDelete?.()
+                }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-400 transition-colors hover:bg-[#2f353d]"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+            </>
+          )}
+          {!isOwnPost && (
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false)
+                setReportModalOpen(true)
+              }}
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#f0f0f8] transition-colors hover:bg-[#2f353d]"
+            >
+              <Flag className="h-4 w-4 text-[#9ca3b0]" />
+              Flag
+            </button>
+          )}
         </div>
       )}
       <ReportModal

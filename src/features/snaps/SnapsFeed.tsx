@@ -8,6 +8,7 @@ import { useSnapsStore } from '../../stores/snapsStore'
 import { useAuthData } from '../../stores/authStore'
 import { useReputationStore, checkLowReputation } from '../../stores/reputationStore'
 import { useIgnoredAuthorsStore } from '../../stores/ignoredAuthorsStore'
+import { DELETED_POST_BODY } from '../../utils/types'
 import { useViewStore } from '../../stores/viewStore'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { PostCard } from '../../components/PostCard'
@@ -15,6 +16,7 @@ import { ComposeFab } from '../../components/ComposeFab'
 import { FeedSkeleton } from '../../components/FeedSkeleton'
 import { EmptyState } from '../../components/EmptyState'
 import { FEED_AVATARS } from '../../constants/feeds'
+import { getTimeRangeLabel } from '../../utils/feedTimeLabel'
 
 const MASONRY_BP = { default: 5, 1919: 4, 1279: 3, 1023: 2, 639: 1 }
 
@@ -34,7 +36,7 @@ export function SnapsFeed() {
   }, [fetchFeed])
 
   const filteredPosts = posts.filter(
-    (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author)
+    (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author) && p.body !== DELETED_POST_BODY
   )
 
   const renderItems = (items: React.ReactNode) =>
@@ -88,7 +90,14 @@ export function SnapsFeed() {
               disabled={loading}
               className="w-full rounded-xl border border-[#3a424a] bg-[#262b30] py-3 text-sm text-[#9ca3b0] transition-colors hover:bg-[#2f353d] hover:text-[#f0f0f8] disabled:opacity-50"
             >
-              {loading ? 'Loading…' : 'Load more'}
+              {loading ? 'Loading…' : (
+                <>
+                  Load more
+                  {getTimeRangeLabel(filteredPosts) && (
+                    <span className="ml-1.5 text-xs text-[#6b7280]">· {getTimeRangeLabel(filteredPosts)}</span>
+                  )}
+                </>
+              )}
             </button>
           )}
         </>

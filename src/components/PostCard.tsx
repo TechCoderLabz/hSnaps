@@ -12,14 +12,21 @@ import { Heart, MessageCircle, Repeat2, Share2, Gift } from 'lucide-react'
 import { AddBookmarkButton } from './AddBookmarkButton'
 import { FeedItemOptions } from './FeedItemOptions'
 import { FeedItemBody } from './FeedItemBody'
+import { EditPostModal } from './EditPostModal'
 import { VoteSlider } from './comments/VoteSlider'
 import { PollView, parsePollFromMetadata } from './PollView'
 import { contentHas3SpeakEmbed } from '../utils/3speak'
 import { getDiscussion } from '../services/hiveService'
 import type { NormalizedPost } from '../utils/types'
+import { DELETED_POST_BODY } from '../utils/types'
 import { useAuthData } from '../stores/authStore'
+import { useHiveOperations } from '../hooks/useHiveOperations'
 import { useReblogStore } from '../stores/reblogStore'
 import { useReputationStore } from '../stores/reputationStore'
+import { useSnapsStore } from '../stores/snapsStore'
+import { useThreadsStore } from '../stores/threadsStore'
+import { useWavesStore } from '../stores/wavesStore'
+import { useMomentStore } from '../stores/momentStore'
 import { isIOS } from '../utils/platform-detection'
 
 const HIVE_AVATAR = (username: string) =>
@@ -53,6 +60,7 @@ function convertPercentageToWeight(percentage: number): number {
 export function PostCard({ post, readOnly = false }: PostCardProps) {
   const { aioha } = useAioha()
   const { isAuthenticated, username } = useAuthData()
+  const { editPost } = useHiveOperations()
   const navigate = useNavigate()
   const [showUpvoteSlider, setShowUpvoteSlider] = useState(false)
   const [showUpvoteList, setShowUpvoteList] = useState(false)
@@ -67,6 +75,9 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   const [tipToken, setTipToken] = useState<'HIVE' | 'HBD'>('HIVE')
   const [tipSubmitting, setTipSubmitting] = useState(false)
   const [tipError, setTipError] = useState<string | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false)
 
   // Reblog store: on-demand checking
   const checkReblog = useReblogStore((s) => s.checkReblog)
@@ -293,6 +304,48 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     navigate(`/user/@${post.author}`)
   }
 
+  /** Remove a post locally from all feed stores. */
+  const removePostFromAllStores = (author: string, permlink: string) => {
+    useSnapsStore.getState().removePost(author, permlink)
+    useThreadsStore.getState().removePost(author, permlink)
+    useWavesStore.getState().removePost(author, permlink)
+    useMomentStore.getState().removePost(author, permlink)
+  }
+
+  /** Update a post body locally in all feed stores. */
+  const updatePostInAllStores = (author: string, permlink: string, newBody: string) => {
+    useSnapsStore.getState().updatePostBody(author, permlink, newBody)
+    useThreadsStore.getState().updatePostBody(author, permlink, newBody)
+    useWavesStore.getState().updatePostBody(author, permlink, newBody)
+    useMomentStore.getState().updatePostBody(author, permlink, newBody)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!post.parent_author || !post.parent_permlink) {
+      toast.error('Cannot delete: missing parent post info')
+      return
+    }
+    setDeleteSubmitting(true)
+    try {
+      await editPost(
+        post.parent_author,
+        post.parent_permlink,
+        post.permlink,
+        DELETED_POST_BODY,
+        post.title,
+        post.json_metadata ?? '{}'
+      )
+      toast.success('Post deleted successfully')
+      setShowDeleteConfirm(false)
+      // Locally remove from all feed stores so UI updates immediately
+      removePostFromAllStores(post.author, post.permlink)
+    } catch {
+      // error toast already shown by useHiveOperations
+    } finally {
+      setDeleteSubmitting(false)
+    }
+  }
+
   const pollData = useMemo(() => parsePollFromMetadata(post.json_metadata), [post.json_metadata])
 
   const actionBtnClass =
@@ -330,6 +383,8 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           targetUsername={post.author}
           targetPermlink={post.permlink}
           ariaLabel="Post options"
+          onEdit={() => setShowEditModal(true)}
+          onDelete={() => setShowDeleteConfirm(true)}
         />
       </div>
 
@@ -531,6 +586,46 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
                 className="rounded-lg border border-[#e31337]/60 bg-[#e31337] px-4 py-2 text-sm font-semibold text-[#f0f0f8] transition-colors hover:bg-[#c0102f] disabled:opacity-50"
               >
                 {tipSubmitting ? 'Sending...' : 'Tip'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showEditModal && (
+        <EditPostModal
+          post={post}
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={(newBody) => {
+            setShowEditModal(false)
+            // Locally update body in all feed stores so UI reflects the edit immediately
+            updatePostInAllStores(post.author, post.permlink, newBody)
+          }}
+        />
+      )}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-xl border border-[#3a424a] bg-[#262b30] p-5 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white">Delete this post?</h3>
+            <p className="mt-2 text-sm text-[#9ca3b0]">
+              This action cannot be undone. The post content will be permanently removed.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteSubmitting}
+                className="rounded-lg border border-[#3a424a] bg-[#262b30] px-4 py-2 text-sm font-medium text-[#f0f0f8] transition-colors hover:bg-[#2f353d] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmDelete()}
+                disabled={deleteSubmitting}
+                className="rounded-lg border border-red-500/60 bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteSubmitting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </div>

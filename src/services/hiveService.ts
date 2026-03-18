@@ -145,6 +145,8 @@ export function normalizeBridgePost(d: BridgePost): NormalizedPost {
   return {
     author: d.author,
     permlink: d.permlink,
+    parent_author: d.parent_author,
+    parent_permlink: d.parent_permlink,
     title: d.title ?? '',
     body: d.body ?? '',
     created: d.created ?? '',

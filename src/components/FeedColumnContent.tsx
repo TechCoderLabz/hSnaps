@@ -6,11 +6,14 @@ import { useAuthData } from '../stores/authStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { PostCard } from './PostCard'
 import { FeedSkeleton } from './FeedSkeleton'
+import { DELETED_POST_BODY } from '../utils/types'
 import { EmptyState } from './EmptyState'
 import { PullToRefresh } from './PullToRefresh'
 import type { UnifiedFeedType } from '../hooks/useFeedByType'
 import { useFeedByType, refreshFeed } from '../hooks/useFeedByType'
 import { FEED_LABELS, FEED_AVATARS } from '../constants/feeds'
+
+import { getTimeRangeLabel } from '../utils/feedTimeLabel'
 
 interface FeedColumnContentProps {
   feedType: UnifiedFeedType
@@ -20,8 +23,11 @@ interface FeedColumnContentProps {
 export function FeedColumnContent({ feedType, showTitle = false }: FeedColumnContentProps) {
   const { isAuthenticated } = useAuthData()
   const feedFilter = useFeedFilterStore((s) => s.feedFilter)
-  const { posts, loading, error, hasMore, loadMore } = useFeedByType(feedType)
+  const { posts: rawPosts, allPosts, loading, error, hasMore, loadMore } = useFeedByType(feedType)
+  const posts = rawPosts.filter((p) => p.body !== DELETED_POST_BODY)
   const handleRefresh = useCallback(() => refreshFeed(feedType), [feedType])
+  // Use allPosts (unfiltered) for time label so it shows even when my_feed/following filters leave no visible posts
+  const timeLabel = getTimeRangeLabel(allPosts)
 
   return (
     <div className="flex h-full flex-col">
@@ -76,7 +82,14 @@ export function FeedColumnContent({ feedType, showTitle = false }: FeedColumnCon
                   disabled={loading}
                   className="w-full rounded-xl border border-[#3a424a] bg-[#262b30] py-3 text-sm text-[#9ca3b0] transition-colors hover:bg-[#2f353d] hover:text-[#f0f0f8] disabled:opacity-50"
                 >
-                  {loading ? 'Loading…' : 'Load more'}
+                  {loading ? 'Loading…' : (
+                    <>
+                      Load more
+                      {timeLabel && (
+                        <span className="ml-1.5 text-xs text-[#6b7280]">· {timeLabel}</span>
+                      )}
+                    </>
+                  )}
                 </button>
               )}
             </>
