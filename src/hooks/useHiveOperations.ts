@@ -66,7 +66,7 @@ export function useHiveOperations() {
         const hiveWeight = convertPercentageToWeight(weight);
         const result = await aioha.vote(author, permlink, hiveWeight);
         if (!result.success) {
-          throw new Error("Vote failed");
+          throw new Error((result as any).error || (result as any).message || "Vote failed");
         }
         return result;
       } catch (err) {
@@ -113,7 +113,7 @@ export function useHiveOperations() {
           jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" })
         );
         if (!result.success) {
-          throw new Error("Comment failed");
+          throw new Error((result as any).error || (result as any).message || "Comment failed");
         }
         return result;
       } catch (err) {
@@ -161,7 +161,7 @@ export function useHiveOperations() {
           jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" })
         );
         if (!result.success) {
-          throw new Error("Edit failed");
+          throw new Error((result as any).error || (result as any).message || "Edit failed");
         }
         return result;
       } catch (err) {
@@ -214,7 +214,7 @@ export function useHiveOperations() {
         );
         const result = await aioha.signAndBroadcastTx(operations as any, KeyTypes.Posting);
         if (!result.success) {
-          throw new Error("Multi-feed post failed");
+          throw new Error((result as any).error || (result as any).message || "Multi-feed post failed");
         }
         return result;
       } catch (err) {
@@ -282,7 +282,7 @@ export function useHiveOperations() {
         ] as any;
         const result = await aioha.signAndBroadcastTx(operations, KeyTypes.Posting);
         if (!result.success) {
-          throw new Error("Vote and comment transaction failed");
+          throw new Error((result as any).error || (result as any).message || "Vote and comment transaction failed");
         }
         return {
           success: result.success,
