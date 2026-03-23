@@ -12,6 +12,30 @@ function convertPercentageToWeight(percentage: number): number {
   return Math.round(clamped * 100);
 }
 
+const DEVELOPER_ACCOUNT = 'sagarkothari88';
+const BENEFICIARY_WEIGHT = 1000; // 10%
+
+/** Check if body has audio or video content */
+function hasMediaContent(body: string): boolean {
+  return /https?:\/\/audio\.3speak\.tv\/play\?a=/.test(body) ||
+    /https?:\/\/play\.3speak\.tv\/(?:watch|embed)\?v=/.test(body);
+}
+
+/** Build comment_options operation with beneficiaries for media posts */
+function buildCommentOptions(author: string, permlink: string): any[] {
+  return ['comment_options', {
+    author,
+    permlink,
+    max_accepted_payout: '1000000.000 HBD',
+    percent_hbd: 10000,
+    allow_votes: true,
+    allow_curation_rewards: true,
+    extensions: [[0, {
+      beneficiaries: [{ account: DEVELOPER_ACCOUNT, weight: BENEFICIARY_WEIGHT }]
+    }]]
+  }];
+}
+
 function generateRandomPermlink(length: number = 8): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
@@ -104,14 +128,25 @@ export function useHiveOperations() {
         }
         const permlink = generateRandomPermlink(8);
         const commentTitle = title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim());
-        const result = await aioha.comment(
-          parentAuthor,
-          parentPermlink,
-          permlink,
-          commentTitle,
-          body,
-          jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" })
-        );
+        const metadata = jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" });
+
+        // Build operations — add comment_options with beneficiaries if audio/video present
+        const operations: any[] = [
+          ['comment', {
+            parent_author: parentAuthor,
+            parent_permlink: parentPermlink,
+            author: username,
+            permlink,
+            title: commentTitle,
+            body,
+            json_metadata: metadata
+          }]
+        ];
+        if (hasMediaContent(body)) {
+          operations.push(buildCommentOptions(username!, permlink));
+        }
+
+        const result = await aioha.signAndBroadcastTx(operations, KeyTypes.Posting);
         if (!result.success) {
           throw new Error((result as any).error || (result as any).message || "Comment failed");
         }
@@ -197,22 +232,26 @@ export function useHiveOperations() {
         if (getPrivatePostingKey()) {
           await ensureProgrammaticAuth();
         }
-        const operations = items.map(
-          ({ parentAuthor, parentPermlink, jsonMetadata }) =>
-            [
-              "comment",
-              {
-                parent_author: parentAuthor,
-                parent_permlink: parentPermlink,
-                author: username,
-                permlink: generateRandomPermlink(8),
-                title: title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim()),
-                body,
-                json_metadata: jsonMetadata,
-              },
-            ] as const
-        );
-        const result = await aioha.signAndBroadcastTx(operations as any, KeyTypes.Posting);
+        const operations: any[] = [];
+        items.forEach(({ parentAuthor, parentPermlink, jsonMetadata }) => {
+          const perm = generateRandomPermlink(8);
+          operations.push([
+            "comment",
+            {
+              parent_author: parentAuthor,
+              parent_permlink: parentPermlink,
+              author: username,
+              permlink: perm,
+              title: title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim()),
+              body,
+              json_metadata: jsonMetadata,
+            },
+          ]);
+          if (hasMediaContent(body)) {
+            operations.push(buildCommentOptions(username!, perm));
+          }
+        });
+        const result = await aioha.signAndBroadcastTx(operations, KeyTypes.Posting);
         if (!result.success) {
           throw new Error((result as any).error || (result as any).message || "Multi-feed post failed");
         }
@@ -253,7 +292,7 @@ export function useHiveOperations() {
         const hiveWeight = convertPercentageToWeight(weight);
         const permlink = generateRandomPermlink(8);
         const commentTitle = title || `Re: ${parentAuthor}'s post`;
-        const operations = [
+        const operations: any[] = [
           [
             "vote",
             {
@@ -279,7 +318,10 @@ export function useHiveOperations() {
               }),
             },
           ],
-        ] as any;
+        ];
+        if (hasMediaContent(body)) {
+          operations.push(buildCommentOptions(username!, permlink));
+        }
         const result = await aioha.signAndBroadcastTx(operations, KeyTypes.Posting);
         if (!result.success) {
           throw new Error((result as any).error || (result as any).message || "Vote and comment transaction failed");
