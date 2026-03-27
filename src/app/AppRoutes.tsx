@@ -26,12 +26,12 @@ export function AppRoutes() {
     { path: '/about-us', element: <AboutUsPage /> },
     { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
     { path: '/tags/:tag', element: <TagFeedPage /> },
-    { path: '/user/:username', element: <UserProfilePage /> },
     {
-      path: '/snap/:author/:permlink',
+      path: '/post/:author/:permlink',
       element: <DashboardLayout />,
       children: [{ index: true, element: <PostCommentsPage /> }],
     },
+    { path: '/user/:username', element: <UserProfilePage /> },
     {
       path: '/dashboard',
       element: <DashboardLayout />,

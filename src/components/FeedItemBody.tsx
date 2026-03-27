@@ -1,17 +1,23 @@
 /**
- * Feed item body: plain text with clickable links and hashtags, plus media blocks.
- * Links open in new tab (or in-app on iOS). Hashtags navigate to /tags/:tag.
+ * Feed item body: plain text with clickable links/hashtags/mentions, plus a unified
+ * swipeable attachment strip. Heavy embeds (YouTube, Twitter, 3Speak, audio) render as
+ * lightweight placeholders; tapping opens a popup that loads the actual embed on demand.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Play } from 'lucide-react'
+import { Play, X, ChevronLeft, ChevronRight, Music } from 'lucide-react'
 import type { NormalizedPost } from '../utils/types'
 import type { ParsedPostBody } from '../utils/postBody'
 import { parsePostBody, plainTextToSegments } from '../utils/postBody'
 import { openLink } from '../utils/openLink'
-import { ImageCarousel } from './ImageCarousel'
+import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
+import { getHiveProxyThumbnailUrl } from '../utils/imageProxy'
 import { useVideoPlaybackStore } from '../stores/videoPlaybackStore'
+
+/* ------------------------------------------------------------------ */
+/*  Shared text helpers                                               */
+/* ------------------------------------------------------------------ */
 
 function LinkSegment({ url }: { url: string }) {
   const handleClick = useCallback(
@@ -48,141 +54,11 @@ function HashtagSegment({ tag }: { tag: string }) {
 function MentionSegment({ username }: { username: string }) {
   return (
     <Link
-      to={`/user/${encodeURIComponent(username)}`}
+      to={`/user/${username}`}
       className="text-[#e31337] underline hover:text-[#c51231]"
     >
       @{username}
     </Link>
-  )
-}
-
-function YoutubeEmbed({ id }: { id: string }) {
-  const [active, setActive] = useState(false)
-  const videoKey = `youtube:${id}`
-  const currentId = useVideoPlaybackStore((s) => s.currentId)
-  const setCurrentId = useVideoPlaybackStore((s) => s.setCurrentId)
-
-  useEffect(() => {
-    if (!active) return
-    if (currentId !== videoKey) {
-      setActive(false)
-    }
-  }, [active, currentId, videoKey])
-  const thumbUrl = `https://img.youtube.com/vi/${id}/hqdefault.jpg`
-
-  if (!active) {
-    return (
-      <button
-        type="button"
-        className="my-3 flex w-full items-center justify-center overflow-hidden rounded-lg bg-black/60"
-        style={{ aspectRatio: '16/9' }}
-        onClick={() => {
-          setCurrentId(videoKey)
-          setActive(true)
-        }}
-      >
-        <div className="relative h-full w-full">
-          <img
-            src={thumbUrl}
-            alt="YouTube video thumbnail"
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black shadow-lg">
-              <Play className="ml-0.5 h-7 w-7" />
-            </div>
-          </div>
-        </div>
-      </button>
-    )
-  }
-
-  return (
-    <div className="my-3 overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
-      <iframe
-        src={`https://www.youtube.com/embed/${id}?autoplay=1&rel=0`}
-        title="YouTube video"
-        className="h-full w-full border-0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  )
-}
-
-/** 3Speak audio: simple iframe to audio.3speak.tv/play. */
-function ThreeSpeakAudioEmbed({ url }: { url: string }) {
-  return (
-    <div className="my-3 overflow-hidden rounded-lg border border-[#3a424a] bg-[#1a1d21]">
-      <iframe
-        src={url}
-        title="3Speak audio"
-        className="h-24 w-full border-0"
-        allow="autoplay"
-      />
-    </div>
-  )
-}
-
-/** HTML5 audio player for direct audio file URLs (mp3, wav, ogg, etc.). */
-function AudioFilePlayer({ url }: { url: string }) {
-  const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] ?? 'Audio')
-  return (
-    <div className="my-3 overflow-hidden rounded-xl border border-[#3a424a] bg-[#1a1d21] p-3">
-      <div className="mb-2 flex items-center gap-2 text-sm text-[#9ca3b0]">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-[#e31337]">
-          <path d="M9 18V5l12-2v13" />
-          <circle cx="6" cy="18" r="3" />
-          <circle cx="18" cy="16" r="3" />
-        </svg>
-        <span className="truncate">{fileName}</span>
-      </div>
-      <audio src={url} controls preload="metadata" className="w-full h-10" />
-    </div>
-  )
-}
-
-function TwitterEmbed({ id }: { id: string }) {
-  const [active, setActive] = useState(false)
-  const videoKey = `twitter:${id}`
-  const currentId = useVideoPlaybackStore((s) => s.currentId)
-  const setCurrentId = useVideoPlaybackStore((s) => s.setCurrentId)
-
-  useEffect(() => {
-    if (!active) return
-    if (currentId !== videoKey) {
-      setActive(false)
-    }
-  }, [active, currentId, videoKey])
-
-  if (!active) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setCurrentId(videoKey)
-          setActive(true)
-        }}
-        className="my-3 flex w-full items-center justify-between rounded-lg border border-[#3a424a] bg-[#0f172a] px-4 py-3 text-left text-sm text-[#e5e7eb] hover:bg-[#111827]"
-      >
-        <div className="flex flex-col">
-          <span className="font-semibold text-[#f9fafb]">Load Tweet</span>
-          <span className="text-xs text-[#9ca3b0]">Tap to load the embedded tweet (saves data).</span>
-        </div>
-        <span className="text-xs font-medium text-[#60a5fa]">Show</span>
-      </button>
-    )
-  }
-
-  return (
-    <div className="my-3 overflow-hidden rounded-lg">
-      <iframe
-        src={`https://platform.twitter.com/embed/Tweet.html?id=${id}&theme=dark`}
-        title={`Tweet ${id}`}
-        className="w-full border-0"
-      />
-    </div>
   )
 }
 
@@ -201,6 +77,435 @@ function highlightText(text: string, query: string): React.ReactNode {
   return parts.length > 0 ? parts : text
 }
 
+/* ------------------------------------------------------------------ */
+/*  Unified attachment model                                          */
+/* ------------------------------------------------------------------ */
+
+type Attachment =
+  | { kind: 'image'; url: string }
+  | { kind: 'youtube'; id: string }
+  | { kind: 'twitter'; id: string }
+  | { kind: '3speak'; author: string; permlink: string }
+  | { kind: '3speak-audio'; url: string }
+  | { kind: 'audio'; url: string }
+
+function buildAttachments(parsed: ParsedPostBody): Attachment[] {
+  const out: Attachment[] = []
+  for (const url of parsed.imageUrls) out.push({ kind: 'image', url })
+  for (const { author, permlink } of parsed.threeSpeakUrls) out.push({ kind: '3speak', author, permlink })
+  for (const url of parsed.threeSpeakAudioUrls) out.push({ kind: '3speak-audio', url })
+  for (const url of parsed.audioFileUrls ?? []) out.push({ kind: 'audio', url })
+  for (const id of parsed.twitterStatusIds) out.push({ kind: 'twitter', id })
+  for (const id of parsed.youtubeVideoIds) out.push({ kind: 'youtube', id })
+  return out
+}
+
+function attachmentLabel(a: Attachment): string {
+  switch (a.kind) {
+    case 'image': return 'Image'
+    case 'youtube': return 'YouTube video'
+    case 'twitter': return 'Tweet'
+    case '3speak': return '3Speak video'
+    case '3speak-audio': return '3Speak audio'
+    case 'audio': return 'Audio'
+  }
+}
+
+function AttachmentIcon({ kind }: { kind: Attachment['kind'] }) {
+  const cls = 'h-5 w-5'
+  switch (kind) {
+    case 'youtube': return <Play className={cls} />
+    case 'twitter': return (
+      <svg viewBox="0 0 24 24" fill="currentColor" className={cls}>
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    )
+    case '3speak': return null
+    case '3speak-audio': return null
+    case 'audio': return <Music className={cls} />
+    default: return null
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Placeholder card for heavy content                                */
+/* ------------------------------------------------------------------ */
+
+const PLACEHOLDER_BG: Record<Attachment['kind'], string> = {
+  image: '',
+  youtube: 'bg-gradient-to-br from-red-900/40 to-red-950/60',
+  twitter: 'bg-gradient-to-br from-sky-900/40 to-slate-950/60',
+  '3speak': 'bg-gradient-to-br from-purple-900/40 to-purple-950/60',
+  '3speak-audio': 'bg-gradient-to-br from-violet-900/40 to-violet-950/60',
+  audio: 'bg-gradient-to-br from-emerald-900/40 to-emerald-950/60',
+}
+
+function PlaceholderCard({ attachment, onClick }: { attachment: Attachment; onClick: () => void }) {
+  if (attachment.kind === 'youtube') {
+    const thumbUrl = `https://img.youtube.com/vi/${attachment.id}/mqdefault.jpg`
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="relative flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-lg bg-black/60"
+        aria-label={`Play ${attachmentLabel(attachment)}`}
+      >
+        <img src={thumbUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-black shadow-lg">
+            <Play className="ml-0.5 h-5 w-5" />
+          </div>
+          <span className="mt-1.5 text-[10px] font-medium text-white/80">Tap to play</span>
+        </div>
+      </button>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex h-full w-full shrink-0 flex-col items-center justify-center gap-1.5 rounded-lg border border-[#3a424a]/60 ${PLACEHOLDER_BG[attachment.kind]}`}
+      aria-label={`Open ${attachmentLabel(attachment)}`}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/70">
+        <AttachmentIcon kind={attachment.kind} />
+      </div>
+      <span className="text-xs font-medium text-white/70">{attachmentLabel(attachment)}</span>
+      <span className="text-[10px] text-white/40">Tap to preview</span>
+    </button>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Media popup – lazy-loads actual embed                             */
+/* ------------------------------------------------------------------ */
+
+function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: () => void }) {
+  const setCurrentId = useVideoPlaybackStore((s) => s.setCurrentId)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    // Lock body scroll while popup is open
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  // Register with video playback store for single-playback management
+  useEffect(() => {
+    if (attachment.kind === 'youtube') setCurrentId(`youtube:${attachment.id}`)
+    else if (attachment.kind === 'twitter') setCurrentId(`twitter:${attachment.id}`)
+    else if (attachment.kind === '3speak') setCurrentId(`3speak:${attachment.author}/${attachment.permlink}`)
+    return () => setCurrentId(null)
+  }, [attachment, setCurrentId])
+
+  // Mobile: fullscreen. Tablet/desktop: fit content, center it.
+  const isCompact = attachment.kind === 'audio' || attachment.kind === '3speak-audio'
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex flex-col bg-black/90 sm:items-center sm:justify-center sm:bg-black/85 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      {/* Header bar with close button — always at top, never overlapping content */}
+      <div className="flex shrink-0 items-center justify-between px-4 py-3 sm:hidden">
+        <span className="text-sm font-medium text-white/70">{attachmentLabel(attachment)}</span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Content container — fullscreen on mobile, fitted card on sm+ */}
+      <div
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-[#3a424a] bg-[#1a1e22] shadow-2xl sm:flex-initial sm:overflow-visible ${
+          isCompact ? 'sm:max-w-md' : 'sm:max-w-2xl'
+        } sm:w-full`}
+      >
+        {/* Desktop close button — outside iframe area */}
+        <div className="hidden sm:flex shrink-0 items-center justify-between border-b border-[#3a424a]/60 px-4 py-2.5">
+          <span className="text-sm font-medium text-white/70">{attachmentLabel(attachment)}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex flex-1 flex-col items-center justify-center p-3 sm:p-4">
+          {attachment.kind === 'youtube' && (
+            <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
+              <iframe
+                src={`https://www.youtube.com/embed/${attachment.id}?autoplay=1&rel=0`}
+                title="YouTube video"
+                className="h-full w-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          )}
+
+          {attachment.kind === 'twitter' && (
+            <div className="w-full overflow-hidden rounded-lg" style={{ minHeight: 400 }}>
+              <iframe
+                src={`https://platform.twitter.com/embed/Tweet.html?id=${attachment.id}&theme=dark`}
+                title={`Tweet ${attachment.id}`}
+                className="w-full border-0"
+                style={{ minHeight: 400 }}
+              />
+            </div>
+          )}
+
+          {attachment.kind === '3speak' && (
+            <div className="w-full">
+              <ThreeSpeakPlayer author={attachment.author} permlink={attachment.permlink} />
+            </div>
+          )}
+
+          {attachment.kind === '3speak-audio' && (
+            <div className="w-full overflow-hidden rounded-lg border border-[#3a424a] bg-[#1a1d21]">
+              <iframe
+                src={attachment.url}
+                title="3Speak audio"
+                className="h-24 w-full border-0"
+                allow="autoplay"
+              />
+            </div>
+          )}
+
+          {attachment.kind === 'audio' && (() => {
+            const fileName = decodeURIComponent(attachment.url.split('/').pop()?.split('?')[0] ?? 'Audio')
+            return (
+              <div className="w-full overflow-hidden rounded-xl border border-[#3a424a] bg-[#1a1d21] p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm text-[#9ca3b0]">
+                  <Music className="h-4 w-4 shrink-0 text-[#e31337]" />
+                  <span className="truncate">{fileName}</span>
+                </div>
+                <audio src={attachment.url} controls preload="metadata" className="w-full h-10" autoPlay />
+              </div>
+            )
+          })()}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Image lightbox integration for image attachments                  */
+/* ------------------------------------------------------------------ */
+
+function ImageThumbnail({
+  url,
+  onClick,
+}: {
+  url: string
+  onClick: () => void
+}) {
+  const thumbUrl = getHiveProxyThumbnailUrl(url)
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
+  const loading = loadedSrc !== thumbUrl
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#1a1e22]"
+      aria-label="View image"
+    >
+      {loading && (
+        <div className="absolute inset-0 z-[5] flex items-center justify-center bg-[#1a1e22]">
+          <span className="inline-block h-8 w-8 animate-spin rounded-full border-3 border-[#e31337] border-t-transparent" />
+        </div>
+      )}
+      <img
+        src={thumbUrl}
+        alt=""
+        className="max-h-full max-w-full object-contain"
+        loading="lazy"
+        draggable={false}
+        onLoad={() => setLoadedSrc(thumbUrl)}
+        onError={() => setLoadedSrc(thumbUrl)}
+      />
+    </button>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Swipeable attachment strip                                        */
+/* ------------------------------------------------------------------ */
+
+const STRIP_HEIGHT = 280
+const SWIPE_THRESHOLD = 40
+
+function AttachmentStrip({
+  attachments,
+  imageUrls,
+}: {
+  attachments: Attachment[]
+  imageUrls: string[]
+}) {
+  const [index, setIndex] = useState(0)
+  const [popupAttachment, setPopupAttachment] = useState<Attachment | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const touchStartX = useRef<number | null>(null)
+  const touchHandled = useRef(false)
+  const dragStartX = useRef<number | null>(null)
+  const dragHandled = useRef(false)
+
+  const total = attachments.length
+  const current = attachments[index]
+  if (!current) return null
+
+  const goPrev = () => setIndex((i) => Math.max(0, i - 1))
+  const goNext = () => setIndex((i) => Math.min(total - 1, i + 1))
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0]?.clientX ?? null
+    touchHandled.current = false
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current == null || touchHandled.current) return
+    const x = e.targetTouches[0]?.clientX ?? touchStartX.current
+    const dx = touchStartX.current - x
+    if (Math.abs(dx) >= SWIPE_THRESHOLD) {
+      touchHandled.current = true
+      if (dx > 0) goNext(); else goPrev()
+      touchStartX.current = null
+    }
+  }
+  const onTouchEnd = () => { touchStartX.current = null; touchHandled.current = false }
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX
+    dragHandled.current = false
+  }
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (dragStartX.current == null || e.buttons !== 1 || dragHandled.current) return
+    const dx = dragStartX.current - e.clientX
+    if (Math.abs(dx) >= SWIPE_THRESHOLD) {
+      dragHandled.current = true
+      if (dx > 0) goNext(); else goPrev()
+      dragStartX.current = null
+    }
+  }
+  const onPointerUp = () => { dragStartX.current = null; dragHandled.current = false }
+
+  const handleTap = (a: Attachment) => {
+    if (a.kind === 'image') {
+      // Find this image's position among all images for lightbox navigation
+      const imgIndex = imageUrls.indexOf(a.url)
+      setLightboxIndex(imgIndex >= 0 ? imgIndex : 0)
+      setLightboxOpen(true)
+    } else {
+      setPopupAttachment(a)
+    }
+  }
+
+  return (
+    <>
+      <div
+        className="relative overflow-hidden rounded-lg"
+        style={{ height: STRIP_HEIGHT }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        {/* Current slide */}
+        <div className="h-full w-full" style={{ touchAction: 'pan-y' }}>
+          {current.kind === 'image' ? (
+            <ImageThumbnail url={current.url} onClick={() => handleTap(current)} />
+          ) : (
+            <PlaceholderCard attachment={current} onClick={() => handleTap(current)} />
+          )}
+        </div>
+
+        {/* Navigation arrows */}
+        {total > 1 && (
+          <>
+            {index > 0 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); goPrev() }}
+                className="absolute left-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
+                aria-label="Previous attachment"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+            {index < total - 1 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); goNext() }}
+                className="absolute right-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
+                aria-label="Next attachment"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Position indicator */}
+        {total > 1 && (
+          <div className="absolute bottom-1.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1">
+            {attachments.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIndex(i) }}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
+                  i === index ? 'w-4 bg-[#e31337]' : 'w-1.5 bg-white/40'
+                }`}
+                aria-label={`Go to attachment ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Image lightbox */}
+      {lightboxOpen && imageUrls.length > 0 && (
+        <ImageLightbox
+          imageUrls={imageUrls}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+
+      {/* Heavy-content popup */}
+      {popupAttachment && (
+        <MediaPopup attachment={popupAttachment} onClose={() => setPopupAttachment(null)} />
+      )}
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Public API – ParsedBodyContent & FeedItemBody                     */
+/* ------------------------------------------------------------------ */
+
 export interface ParsedBodyContentProps {
   parsed: ParsedPostBody
   /** When true, hide image carousel (e.g. when 3speak is present). */
@@ -212,7 +517,7 @@ export interface ParsedBodyContentProps {
   className?: string
 }
 
-/** Renders parsed body: carousel, plain text with links/hashtags, 3speak, Twitter, YouTube. Same style as dashboard feed. */
+/** Renders parsed body: text with links/hashtags + unified swipeable attachment strip. */
 export function ParsedBodyContent({
   parsed,
   hideImages = false,
@@ -220,10 +525,13 @@ export function ParsedBodyContent({
   highlightQuery,
   className = '',
 }: ParsedBodyContentProps) {
-  return (
-    <div className={`feed-item-body space-y-2 ${className}`}>
-      {!hideImages && parsed.imageUrls.length > 0 && (
-        imageLayout === 'grid' ? (
+  const attachments = useMemo(() => buildAttachments(parsed), [parsed])
+
+  // For grid layout (e.g. composer preview), keep the old simple rendering
+  if (imageLayout === 'grid') {
+    return (
+      <div className={`feed-item-body space-y-2 ${className}`}>
+        {!hideImages && parsed.imageUrls.length > 0 && (
           <div className="mb-2 grid grid-cols-2 gap-2">
             {parsed.imageUrls.map((url) => (
               <img
@@ -235,13 +543,38 @@ export function ParsedBodyContent({
               />
             ))}
           </div>
-        ) : (
-          <div className="post-card-grid-media mb-2">
-            <ImageCarousel imageUrls={parsed.imageUrls} imageClassName="rounded-lg" />
+        )}
+        {parsed.plainText && (
+          <div className="whitespace-pre-line break-words text-sm leading-relaxed text-zinc-300">
+            {plainTextToSegments(parsed.plainText).map((seg, i) =>
+              seg.type === 'text' ? (
+                <span key={i}>
+                  {highlightQuery ? highlightText(seg.value, highlightQuery) : seg.value}
+                </span>
+              ) : seg.type === 'link' ? (
+                <LinkSegment key={i} url={seg.url} />
+              ) : seg.type === 'hashtag' ? (
+                <HashtagSegment key={i} tag={seg.tag} />
+              ) : (
+                <MentionSegment key={i} username={seg.username} />
+              )
+            )}
           </div>
-        )
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`feed-item-body space-y-2 ${className}`}>
+      {/* Unified attachment strip */}
+      {attachments.length > 0 && (
+        <div className="mb-2">
+          <AttachmentStrip attachments={attachments} imageUrls={parsed.imageUrls} />
+        </div>
       )}
 
+      {/* Text content */}
       {parsed.plainText && (
         <div className="whitespace-pre-line break-words text-sm leading-relaxed text-zinc-300">
           {plainTextToSegments(parsed.plainText).map((seg, i) =>
@@ -259,26 +592,6 @@ export function ParsedBodyContent({
           )}
         </div>
       )}
-
-      {parsed.threeSpeakUrls.map(({ author, permlink }) => (
-        <ThreeSpeakPlayer key={`${author}/${permlink}`} author={author} permlink={permlink} />
-      ))}
-
-      {parsed.threeSpeakAudioUrls.map((url) => (
-        <ThreeSpeakAudioEmbed key={url} url={url} />
-      ))}
-
-      {parsed.audioFileUrls?.map((url) => (
-        <AudioFilePlayer key={url} url={url} />
-      ))}
-
-      {parsed.twitterStatusIds.map((id) => (
-        <TwitterEmbed key={id} id={id} />
-      ))}
-
-      {parsed.youtubeVideoIds.map((id) => (
-        <YoutubeEmbed key={id} id={id} />
-      ))}
     </div>
   )
 }

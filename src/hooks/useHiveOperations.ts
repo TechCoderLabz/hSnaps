@@ -128,7 +128,12 @@ export function useHiveOperations() {
         }
         const permlink = generateRandomPermlink(8);
         const commentTitle = title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim());
-        const metadata = jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" });
+        const metadata = jsonMetadata ?? JSON.stringify({
+          app: 'peakd/2026.3.1',
+          developer: DEVELOPER_ACCOUNT,
+          tags: ['hsnaps', 'hreplier', 'hstats', 'hfestfacts', DEVELOPER_ACCOUNT],
+          format: 'markdown',
+        });
 
         // Build operations — add comment_options with beneficiaries if audio/video present
         const operations: any[] = [
@@ -193,7 +198,12 @@ export function useHiveOperations() {
           permlink,
           commentTitle,
           body,
-          jsonMetadata ?? JSON.stringify({ tags: ["snaps"], app: "hSnaps/1.0.0", format: "markdown" })
+          jsonMetadata ?? JSON.stringify({
+            app: 'peakd/2026.3.1',
+            developer: DEVELOPER_ACCOUNT,
+            tags: ['hsnaps', 'hreplier', 'hstats', 'hfestfacts', DEVELOPER_ACCOUNT],
+            format: 'markdown',
+          })
         );
         if (!result.success) {
           throw new Error((result as any).error || (result as any).message || "Edit failed");

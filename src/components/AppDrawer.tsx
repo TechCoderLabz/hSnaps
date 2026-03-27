@@ -14,6 +14,7 @@ import {
   Home,
   ShieldCheck,
   Info,
+  User,
 } from 'lucide-react'
 import { useMobileFeedStore } from '../stores/mobileFeedStore'
 import { isMobilePlatform } from '../utils/platform-detection'
@@ -44,7 +45,7 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
   const navigate = useNavigate()
   const { feedType, setFeedType } = useMobileFeedStore()
   const isNative = isMobilePlatform()
-  const { isAuthenticated } = useAuthData()
+  const { isAuthenticated, username } = useAuthData()
 
   const handleNav = (path: string) => {
     navigate(path.startsWith('/') ? path : `/dashboard/${path}`)
@@ -152,6 +153,18 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   <span>Search User</span>
                 </button>
               </li>
+              {isAuthenticated && username && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleNav(`/user/${username}`)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  >
+                    <User className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                    <span>My Profile</span>
+                  </button>
+                </li>
+              )}
               {isAuthenticated && (
                 <li>
                   <button

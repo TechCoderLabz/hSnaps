@@ -36,6 +36,7 @@ function extractImageUrlsFromMarkdown(md: string): string[] {
 }
 
 const DEVELOPER = 'sagarkothari88'
+const DEFAULT_TAGS = ['hsnaps', 'hreplier', 'hstats', 'hfestfacts', 'sagarkothari88']
 
 /** Build app-specific json_metadata for each feed type. */
 function buildJsonMetadataForFeed(
@@ -73,14 +74,14 @@ function buildJsonMetadataForFeed(
     case 'snaps':
       return JSON.stringify({
         app: 'peakd/2026.3.1', developer: DEVELOPER,
-        tags: ['hive-178315', 'snaps', 'hsnaps'],
+        tags: ['hive-178315', 'snaps', ...DEFAULT_TAGS],
         ...(images.length > 0 && { image: images }),
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
     case 'waves':
       return JSON.stringify({
         app: 'ecency/3.5.1-mobile', developer: DEVELOPER,
-        tags: [wavesTag, 'hsnaps'], type: 'wave',
+        tags: [wavesTag, ...DEFAULT_TAGS], type: 'wave',
         ...(images.length > 0 && { image: images }),
         ...(images.length > 0 && { image_ratios: images.map(() => 1.17) }),
         format: 'markdown+html', links: [],
@@ -90,7 +91,7 @@ function buildJsonMetadataForFeed(
       return JSON.stringify({
         app: 'leothreads/0.3', developer: DEVELOPER,
         isPoll: false, pollOptions: {},
-        tags: ['leofinance', 'hsnaps'],
+        tags: ['leofinance', ...DEFAULT_TAGS],
         dimensions: {}, format: 'markdown',
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
@@ -98,13 +99,13 @@ function buildJsonMetadataForFeed(
       return JSON.stringify({
         app: 'peakd/2026.3.1', developer: DEVELOPER,
         image: images.length > 0 ? images : [],
-        tags: ['moments', 'hsnaps'],
+        tags: ['moments', ...DEFAULT_TAGS],
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
     default:
       return JSON.stringify({
         app: 'peakd/2026.3.1', developer: DEVELOPER,
-        tags: ['hive-178315', 'snaps', 'hsnaps'], format: 'markdown',
+        tags: ['hive-178315', 'snaps', ...DEFAULT_TAGS], format: 'markdown',
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
   }

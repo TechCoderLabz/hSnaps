@@ -232,7 +232,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleShare = async () => {
-    const postUrl = `${window.location.origin}/snap/${post.author}/${post.permlink}`
+    const postUrl = `${window.location.origin}/#/post/${post.author}/${post.permlink}`
     try {
       if (navigator.share) {
         await navigator.share({ url: postUrl, title: `Post by @${post.author}` })
@@ -271,7 +271,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
             from: username,
             to: post.author,
             amount,
-            memo: `Tip from @${username} via hSnaps`,
+            memo: `!tip @${post.author}/${post.permlink} @${username} app:hsnaps message:Tip sent through hSnaps`,
           },
         ]],
         KeyTypes.Active
@@ -297,11 +297,11 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleCommentRoute = () => {
-    navigate(`/snap/${post.author}/${post.permlink}`, { state: { post } })
+    navigate(`/post/${post.author}/${post.permlink}`, { state: { post } })
   }
 
   const handleAuthorRoute = () => {
-    navigate(`/user/@${post.author}`)
+    navigate(`/user/${post.author}`)
   }
 
   /** Remove a post locally from all feed stores. */
@@ -348,11 +348,23 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
 
   const pollData = useMemo(() => parsePollFromMetadata(post.json_metadata), [post.json_metadata])
 
+  const isHSnapsPost = useMemo(() => {
+    if (!post.json_metadata) return false
+    try {
+      const meta = JSON.parse(post.json_metadata) as { tags?: string[] }
+      return Array.isArray(meta.tags) && meta.tags.some((t) => String(t).toLowerCase() === 'hsnaps')
+    } catch { return false }
+  }, [post.json_metadata])
+
   const actionBtnClass =
     'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8]'
 
   return (
-    <article className="break-inside-avoid rounded-2xl border border-[#3a424a] bg-[#262b30] transition-colors duration-200 hover:border-[#e31337]/40">
+    <article className={`break-inside-avoid rounded-2xl border bg-[#262b30] transition-colors duration-200 ${
+      isHSnapsPost
+        ? 'border-[#e31337]/50 shadow-[0_0_12px_rgba(227,19,55,0.15)] hover:border-[#e31337]/70'
+        : 'border-[#3a424a] hover:border-[#e31337]/40'
+    }`}>
       {/* Header: avatar + author + date + options */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-0">
         <button
@@ -377,6 +389,11 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
               @{post.author}
             </button>
             <span className="shrink-0 text-xs text-[#9ca3b0]">{formatDate(post.created)}</span>
+            {isHSnapsPost && (
+              <span className="shrink-0 rounded-full bg-[#e31337]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#e31337]">
+                hSnaps
+              </span>
+            )}
           </div>
         </div>
         <FeedItemOptions
@@ -476,6 +493,12 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           >
             <Gift className="h-4 w-4" />
           </button>
+        )}
+
+        {post.payout > 0 && (
+          <span className="shrink-0 text-xs font-medium text-[#22c55e]">
+            ${post.payout.toFixed(2)}
+          </span>
         )}
       </div>
 
