@@ -86,6 +86,21 @@ export function useFeedByType(feedType: UnifiedFeedType) {
     return () => { abortController.abort('avoid duplicate requests') }
   }, [feedType])
 
+  // Auto-load more containers for "My Feed" until we cover the last 15 days (snaps only)
+  useEffect(() => {
+    if (feedType !== 'snaps') return
+    if (feedFilter !== 'my_feed' || !username) return
+    if (state.loading || !state.hasMore) return
+
+    const fifteenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    if (state.posts.length > 0) {
+      const oldestTime = Math.min(...state.posts.map((p) => new Date(p.created).getTime()))
+      if (oldestTime < fifteenDaysAgo) return
+    }
+
+    state.loadMore()
+  }, [feedType, feedFilter, username, state.loading, state.hasMore, state.posts.length])
+
   return {
     ...state,
     posts: filteredPosts,

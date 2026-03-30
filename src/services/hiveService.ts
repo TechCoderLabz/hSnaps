@@ -260,15 +260,20 @@ export async function getFollowing(
   return Array.isArray(result) ? result : []
 }
 
-/** Cursor for next page of containers (older posts). */
+/** Cursor that tracks position within the current batch of containers. */
 export interface FeedPageCursor {
-  author: string
-  permlink: string
+  /** The fetched containers (author/permlink pairs) in the current batch. */
+  containers: Array<{ author: string; permlink: string }>
+  /** Index of the next container to process within the batch. */
+  containerIndex: number
+  /** Whether there are more batches to fetch from the API (last batch had >= limit results). */
+  hasMoreBatches: boolean
 }
 
 /**
- * Fetch one page of feed posts: get_account_posts → containers, then get_discussion for container → replies as posts.
- * Uses cursor (start_author/start_permlink) to fetch older containers on load more.
+ * Fetch one page of feed posts.
+ * Iterates through containers one by one. Only fetches a new batch of containers
+ * from get_account_posts when all containers in the current batch are exhausted.
  */
 export async function fetchFeedPage(
   feedType: FeedType,
@@ -279,28 +284,47 @@ export async function fetchFeedPage(
 ): Promise<{ posts: NormalizedPost[]; hasMore: boolean; nextCursor: FeedPageCursor | null }> {
   const limit = 20
   const account = CONTAINER_ACCOUNTS[feedType]
-  const containers = await getAccountPosts(
-    account,
-    limit,
-    cursor?.author ?? null,
-    cursor?.permlink ?? null,
-    observer,
-    signal
-  )
-  if (containers.length === 0) {
-    return { posts: [], hasMore: false, nextCursor: null }
+
+  let containers = cursor?.containers ?? []
+  let containerIndex = cursor?.containerIndex ?? 0
+  let hasMoreBatches = cursor?.hasMoreBatches ?? true
+
+  // If we have no containers or we've exhausted the current batch, fetch a new batch
+  if (containers.length === 0 || containerIndex >= containers.length) {
+    // Use the last container from the previous batch as the pagination cursor
+    const lastContainer = containers.length > 0 ? containers[containers.length - 1] : null
+    const rawContainers = await getAccountPosts(
+      account,
+      limit,
+      lastContainer?.author ?? null,
+      lastContainer?.permlink ?? null,
+      observer,
+      signal
+    )
+    if (rawContainers.length === 0) {
+      return { posts: [], hasMore: false, nextCursor: null }
+    }
+    containers = rawContainers.map((c) => ({ author: c.author, permlink: c.permlink }))
+    containerIndex = 0
+    hasMoreBatches = rawContainers.length >= limit
   }
-  const container = containers[0]
+
+  // Process the current container
+  const container = containers[containerIndex]
   const discussion = await getDiscussion(container.author, container.permlink, observer, signal)
   const posts = discussionRepliesToPosts(discussion, container.author, container.permlink)
-  const lastContainer = containers[containers.length - 1]
-  const nextCursor: FeedPageCursor | null =
-    containers.length >= limit
-      ? { author: lastContainer.author, permlink: lastContainer.permlink }
-      : null
+
+  // Advance to the next container
+  const nextIndex = containerIndex + 1
+  const hasMore = nextIndex < containers.length || hasMoreBatches
+
+  const nextCursor: FeedPageCursor | null = hasMore
+    ? { containers, containerIndex: nextIndex, hasMoreBatches }
+    : null
+
   return {
     posts,
-    hasMore: nextCursor !== null,
+    hasMore,
     nextCursor,
   }
 }
