@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search as SearchIcon, User, X } from 'lucide-react'
+import { useHiveNodeStore } from '../stores/hiveNodeStore'
 
 type LookupResult = string[]
 
 export function SearchUserPage() {
   const navigate = useNavigate()
+  const hiveApiNode = useHiveNodeStore((s) => s.hiveApiNode)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<string[]>([])
@@ -22,7 +24,7 @@ export function SearchUserPage() {
     setError(null)
 
     try {
-      const response = await fetch('https://api.hive.blog', {
+      const response = await fetch(hiveApiNode, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +58,7 @@ export function SearchUserPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [hiveApiNode])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {

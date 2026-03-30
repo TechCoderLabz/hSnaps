@@ -31,7 +31,7 @@ export function HtmlWith3Speak({ html, className = '' }: HtmlWith3SpeakProps) {
       if (!parsed) return
 
       const wrapper = document.createElement('div')
-      wrapper.className = '3speak-player-wrapper'
+      wrapper.className = 'speak-player-wrapper'
       link.parentNode?.replaceChild(wrapper, link)
 
       const root = createRoot(wrapper)

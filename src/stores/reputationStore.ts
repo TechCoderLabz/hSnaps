@@ -9,7 +9,7 @@ import { create } from 'zustand'
 const REPUTATION_API = 'https://api.syncad.com/reputation-api/accounts'
 const STORAGE_KEY = 'reputation'
 const BATCH_DELAY = 200 // ms between sequential API calls
-const LOW_REP_THRESHOLD = 10
+// const LOW_REP_THRESHOLD = 10 // temporarily disabled
 
 export interface StoredReputationItem {
   name: string
@@ -71,10 +71,12 @@ async function fetchReputation(username: string, signal?: AbortSignal): Promise<
 }
 
 /** Check if a username has low reputation from the cache. Below threshold = hide from feed. */
-export function checkLowReputation(cache: Record<string, number>, username: string): boolean {
-  const score = cache[username]
-  if (score === undefined) return false // Not yet in cache — show post by default until we fetch
-  return score < LOW_REP_THRESHOLD
+// TODO: Reputation filter temporarily disabled — always returns false
+export function checkLowReputation(_cache: Record<string, number>, _username: string): boolean {
+  return false
+  // const score = cache[username]
+  // if (score === undefined) return false
+  // return score < LOW_REP_THRESHOLD
 }
 
 export const useReputationStore = create<ReputationState>((set, get) => ({

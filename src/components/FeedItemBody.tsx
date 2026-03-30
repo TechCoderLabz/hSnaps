@@ -120,11 +120,58 @@ function AttachmentIcon({ kind }: { kind: Attachment['kind'] }) {
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
       </svg>
     )
-    case '3speak': return null
-    case '3speak-audio': return null
+    case '3speak': return <Play className={cls} />
+    case '3speak-audio': return <Music className={cls} />
     case 'audio': return <Music className={cls} />
     default: return null
   }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Twitter embed                                                     */
+/* ------------------------------------------------------------------ */
+
+function TwitterEmbed({ id }: { id: string }) {
+  const [height, setHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      try {
+        const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+        if (!d || typeof d !== 'object') return
+        let h: number | undefined
+        if (d.method === 'resize' && Array.isArray(d.params)) {
+          for (const p of d.params) {
+            if (typeof p === 'number' && p > 0) h = p
+            if (p && typeof p === 'object' && typeof p.height === 'number') h = p.height
+          }
+        }
+        if (d['twttr.private.resize']?.height) h = d['twttr.private.resize'].height
+        if (!h && typeof d.height === 'number') h = d.height
+        if (!h && d.msg_type === 'resize' && d.msg_data?.height) h = d.msg_data.height
+        if (h && h > 50) setHeight(Math.ceil(h))
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+
+  return (
+    <div
+      className="twitter-embed-wrapper w-full rounded-lg flex items-center justify-center bg-black/60 overflow-hidden"
+      style={height ? { maxHeight: '80vh', overflowY: 'auto' } : undefined}
+    >
+      <iframe
+        src={`https://platform.twitter.com/embed/Tweet.html?id=${id}&theme=dark&dnt=true&origin=${encodeURIComponent(origin)}`}
+        title={`Tweet ${id}`}
+        className="twitter-embed-iframe w-full border-0 flex-shrink-0 justify-self-start items-center bg-black"
+        scrolling="yes"
+        style={{ height: height ?? '60vh' }}
+      />
+    </div>
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -260,14 +307,7 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
           )}
 
           {attachment.kind === 'twitter' && (
-            <div className="w-full overflow-hidden rounded-lg" style={{ minHeight: 400 }}>
-              <iframe
-                src={`https://platform.twitter.com/embed/Tweet.html?id=${attachment.id}&theme=dark`}
-                title={`Tweet ${attachment.id}`}
-                className="w-full border-0"
-                style={{ minHeight: 400 }}
-              />
-            </div>
+            <TwitterEmbed id={attachment.id} />
           )}
 
           {attachment.kind === '3speak' && (

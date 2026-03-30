@@ -3,12 +3,14 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, ExternalLink, FileText, Shield, Trash2 } from 'lucide-react'
+import { ChevronRight, ExternalLink, FileText, Server, Shield, Trash2 } from 'lucide-react'
 import { useAuthStore } from 'hive-authentication'
 import { toast } from 'sonner'
 import { APP_VERSION } from '../config/appVersion'
 import { SUPPORT_DISCORD_URL, VOTE_WITNESS_URL, SUPPORTERS } from '../constants/support'
 import { useAuthData, useAppAuthStore } from '../stores/authStore'
+import { useHiveNodeStore, HIVE_API_NODE_OPTIONS } from '../stores/hiveNodeStore'
+import type { HiveApiNode } from '../stores/hiveNodeStore'
 import { isIOS } from '../utils/platform-detection'
 
 const HD_API_SERVER =
@@ -18,6 +20,8 @@ export function SettingsPage() {
   const { isAuthenticated, token } = useAuthData()
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser)
   const clearAuth = useAppAuthStore((s) => s.clearAuth)
+  const hiveApiNode = useHiveNodeStore((s) => s.hiveApiNode)
+  const setHiveApiNode = useHiveNodeStore((s) => s.setHiveApiNode)
   const navigate = useNavigate()
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -73,6 +77,30 @@ export function SettingsPage() {
         <div className="flex items-center justify-between">
           <span className="font-medium text-[#f0f0f8]">App version</span>
           <span className="text-[#9ca3b0] tabular-nums">v{APP_VERSION}</span>
+        </div>
+      </section>
+
+      {/* Hive API Node */}
+      <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85 px-4 py-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Server className="h-5 w-5 shrink-0 text-[#e31337]" />
+            <div>
+              <h3 className="font-medium text-[#f0f0f8]">Hive API Node</h3>
+              <p className="text-xs text-[#9ca3b0]">Choose your preferred Hive API node for data fetching</p>
+            </div>
+          </div>
+          <select
+            value={hiveApiNode}
+            onChange={(e) => setHiveApiNode(e.target.value as HiveApiNode)}
+            className="w-full rounded-lg border border-[#3a424a] bg-[#1a1e22] px-3 py-2 text-sm text-white focus:border-transparent focus:ring-2 focus:ring-[#e31337] outline-none"
+          >
+            {HIVE_API_NODE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
       </section>
 

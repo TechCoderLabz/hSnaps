@@ -4,8 +4,7 @@
  * - bridge.get_discussion → replies inside a container (actual feed items)
  */
 import type { NormalizedPost, FeedType } from '../utils/types'
-
-const HIVE_RPC_URL = 'https://api.hive.blog/'
+import { getHiveApiNode } from '../stores/hiveNodeStore'
 
 /** Bridge API response: post or container from get_account_posts / get_discussion */
 interface BridgePost {
@@ -36,19 +35,20 @@ interface BridgePost {
   net_rshares?: number
 }
 
-/** Fallback RPC nodes for condenser_api (api.hive.blog sometimes blocks CORS) */
-const CONDENSER_RPC_NODES = [
-  'https://api.hive.blog/',
+/** Fallback RPC nodes for condenser_api */
+const CONDENSER_FALLBACK_NODES = [
   'https://api.deathwing.me/',
   'https://rpc.ausbit.dev/',
 ]
 
-/** JSON-RPC call to Hive (condenser_api — params is an array, tries multiple nodes) */
+/** JSON-RPC call to Hive (condenser_api — params is an array, tries selected node + fallbacks) */
 async function callCondenserApi<T>(method: string, params: unknown[], signal?: AbortSignal): Promise<T> {
   const id = Math.floor(Math.random() * 1e9)
   const body = JSON.stringify({ id, jsonrpc: '2.0', method: `condenser_api.${method}`, params })
+  const selectedNode = getHiveApiNode().replace(/\/$/, '') + '/'
+  const nodes = [selectedNode, ...CONDENSER_FALLBACK_NODES.filter((n) => n !== selectedNode)]
   let lastError: Error | null = null
-  for (const rpc of CONDENSER_RPC_NODES) {
+  for (const rpc of nodes) {
     try {
       const res = await fetch(rpc, {
         method: 'POST',
@@ -74,7 +74,8 @@ async function callCondenserApi<T>(method: string, params: unknown[], signal?: A
 /** JSON-RPC call to Hive (bridge) */
 async function callHiveRpc<T>(method: string, params: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
   const id = Math.floor(Math.random() * 1e9)
-  const res = await fetch(HIVE_RPC_URL, {
+  const rpcUrl = getHiveApiNode().replace(/\/$/, '') + '/'
+  const res = await fetch(rpcUrl, {
     method: 'POST',
     headers: {
       accept: 'application/json, text/plain, */*',

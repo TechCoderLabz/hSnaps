@@ -1,17 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Client } from '@hiveio/dhive'
 import type { Discussion } from '../utils/commentTypes'
+import { getHiveApiNode } from '../stores/hiveNodeStore'
 
-// Lightweight dhive client for comments list (bridge.get_discussion)
-const dhiveClient = new Client([
-  'https://api.hive.blog',
-  'https://api.syncad.com',
-  'https://api.deathwing.me',
-])
+// Create a fresh dhive client using the currently-selected node each call
+function getDhiveClient() {
+  const selected = getHiveApiNode()
+  return new Client([
+    selected,
+    'https://api.syncad.com',
+    'https://api.deathwing.me',
+  ].filter((v, i, a) => a.indexOf(v) === i))
+}
 
 export async function getCommentsList(author: string, permlink: string): Promise<Discussion[]> {
   try {
-    const rawResult: unknown = await dhiveClient.call('bridge', 'get_discussion', [author, permlink])
+    const rawResult: unknown = await getDhiveClient().call('bridge', 'get_discussion', [author, permlink])
 
     // The bridge API may return either an array of discussions or
     // an object keyed by "author/permlink" → Discussion.

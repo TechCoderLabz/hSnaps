@@ -143,10 +143,10 @@ body {
 }
 
 /* 3Speak player (replaces 3speak.tv links) */
-.3speak-player-wrapper {
+.speak-player-wrapper {
   margin: 0.5rem 0;
 }
-.3speak-player-wrapper video {
+.speak-player-wrapper video {
   max-height: 360px;
 }
 
@@ -170,4 +170,31 @@ body {
   max-width: 100% !important;
   width: 100% !important;
   overflow: hidden;
+}
+
+/* Twitter/X embed iframe — override generic 16:9 sizing for tweet content */
+.twitter-embed-wrapper {
+  max-width: 550px;
+  margin: 0 auto;
+  border-radius: 0.5rem;
+  background: #15202b;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+.twitter-embed-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+.twitter-embed-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.twitter-embed-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 3px;
+}
+.twitter-embed-wrapper iframe {
+  aspect-ratio: auto !important;
+  min-height: unset !important;
+  margin: 0 !important;
+  width: 100% !important;
+  color-scheme: dark;
 }
