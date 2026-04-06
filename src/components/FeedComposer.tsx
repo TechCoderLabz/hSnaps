@@ -123,7 +123,7 @@ export function FeedComposer({
   placeholder = 'Write in Markdown...',
   replyMode = false,
 }: FeedComposerProps) {
-  const { isAuthenticated, username, ecencyToken } = useAuthData()
+  const { isAuthenticated, username, ecencyToken, token } = useAuthData()
   const { comment } = useHiveOperations()
   const [body, setBody] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -185,7 +185,7 @@ export function FeedComposer({
   }
 
   return (
-    <div>
+    <div className='p-2'>
       {/* Character count + moments warning */}
       <div className="flex items-center gap-2 mb-2">
         <span className={`text-xs ${over ? 'text-red-400' : 'text-[#9ca3b0]'}`}>
@@ -212,9 +212,8 @@ export function FeedComposer({
         ecencyToken={ecencyToken}
         threeSpeakApiKey={threeSpeakApiKey}
         giphyApiKey={giphyApiKey}
-        hideMention={!parentAuthor}
-        hideCode
-        hideTemplate
+        templateApiBaseUrl={import.meta.env.VITE_TEMPLATE_API_BASE_URL || 'https://hreplier-api.sagarkothari88.one/data/templates'}
+        templateToken={token}
         hidePoll={replyMode}
         onPollChange={(poll) => setPollData(poll)}
       />
