@@ -1,10 +1,10 @@
 {
   "name": "hive-snaps-reactjs",
   "private": true,
-  "version": "0.0.19",
+  "version": "0.0.20",
   "deployment": {
     "branch": "master",
-    "commitHash": "5b627c3"
+    "commitHash": "c1a8b96"
   },
   "type": "module",
   "scripts": {
@@ -26,7 +26,7 @@
     "@mantequilla-soft/3speak-player": "^0.3.2",
     "@tailwindcss/vite": "^4.2.1",
     "hive-authentication": "^0.6.2",
-    "hive-react-kit": "^0.6.8",
+    "hive-react-kit": "^0.7.7",
     "lucide-react": "^0.576.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
