@@ -26,11 +26,7 @@ export function AppRoutes() {
     { path: '/about-us', element: <AboutUsPage /> },
     { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
     { path: '/tags/:tag', element: <TagFeedPage /> },
-    {
-      path: '/post/:author/:permlink',
-      element: <DashboardLayout />,
-      children: [{ index: true, element: <PostCommentsPage /> }],
-    },
+    { path: '/post/:author/:permlink', element: <PostCommentsPage /> },
     { path: '/user/:username', element: <UserProfilePage /> },
     {
       path: '/dashboard',

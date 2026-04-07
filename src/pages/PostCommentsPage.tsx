@@ -11,6 +11,7 @@ import { ReportModal } from 'hive-authentication'
 import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
+import { useReportedPostsStore } from '../stores/reportedPostsStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
 
 const REPORT_API_URL = 'https://hreplier-api.sagarkothari88.one/report-post'
@@ -38,8 +39,12 @@ export function PostCommentsPage() {
   const { isAuthenticated, username: currentUsername, ecencyToken, token } = useAuthData()
   const { comment, vote } = useHiveOperations()
   const addIgnoredAuthor = useIgnoredAuthorsStore((s) => s.addAuthor)
+  const ignoredAuthors = useIgnoredAuthorsStore((s) => s.list)
+  const reportedPostsStore = useReportedPostsStore()
   const [reportOpen, setReportOpen] = useState(false)
+  const [reportTarget, setReportTarget] = useState<{ author: string; permlink: string } | null>(null)
   const [showTipDialog, setShowTipDialog] = useState(false)
+  const [tipTarget, setTipTarget] = useState<{ author: string; permlink: string } | null>(null)
   const [tipAmount, setTipAmount] = useState('')
   const [tipToken, setTipToken] = useState<'HIVE' | 'HBD'>('HIVE')
   const [tipSubmitting, setTipSubmitting] = useState(false)
@@ -64,6 +69,7 @@ export function PostCommentsPage() {
     setTipError(null)
     setTipAmount('')
     setTipToken('HIVE')
+    setTipTarget({ author: resolvedAuthor, permlink: resolvedPermlink })
     setShowTipDialog(true)
   }
 
@@ -77,6 +83,8 @@ export function PostCommentsPage() {
       setTipError('Enter a valid amount greater than 0.')
       return
     }
+    const tipAuthor = tipTarget?.author ?? resolvedAuthor
+    const tipPermlink = tipTarget?.permlink ?? resolvedPermlink
     setTipSubmitting(true)
     setTipError(null)
     try {
@@ -86,9 +94,9 @@ export function PostCommentsPage() {
           'transfer',
           {
             from: currentUsername,
-            to: resolvedAuthor,
+            to: tipAuthor,
             amount,
-            memo: `!tip @${resolvedAuthor}/${resolvedPermlink} @${currentUsername} app:hsnaps message:Tip sent through hSnaps`,
+            memo: `!tip @${tipAuthor}/${tipPermlink} @${currentUsername} app:hsnaps message:Tip sent through hSnaps`,
           },
         ]],
         KeyTypes.Active
@@ -119,6 +127,8 @@ export function PostCommentsPage() {
       setReportOpen(false)
       return
     }
+    const rAuthor = reportTarget?.author ?? resolvedAuthor
+    const rPermlink = reportTarget?.permlink ?? resolvedPermlink
     try {
       const res = await fetch(REPORT_API_URL, {
         method: 'POST',
@@ -127,18 +137,19 @@ export function PostCommentsPage() {
           Authorization: token,
         },
         body: JSON.stringify({
-          username: resolvedAuthor,
-          permlink: resolvedPermlink,
+          username: rAuthor,
+          permlink: rPermlink,
           reason,
         }),
       })
       if (!res.ok) throw new Error(`Report failed (${res.status})`)
-      await addIgnoredAuthor(token, resolvedAuthor)
-      toast.success('Post reported and author ignored')
+      reportedPostsStore.addReportedPost(rAuthor, rPermlink)
+      await addIgnoredAuthor(token, rAuthor)
+      toast.success('Reported and author ignored')
       setReportOpen(false)
-      navigate('/dashboard')
+      setReportTarget(null)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to report post')
+      toast.error(e instanceof Error ? e.message : 'Failed to report')
     }
   }
 
@@ -162,28 +173,115 @@ export function PostCommentsPage() {
         permlink={resolvedPermlink}
         currentUser={currentUsername || undefined}
         ecencyToken={ecencyToken}
+        templateToken={token}
+        templateApiBaseUrl={import.meta.env.VITE_TEMPLATE_API_BASE_URL || 'https://hreplier-api.sagarkothari88.one/data/templates'}
+        threeSpeakApiKey={import.meta.env.VITE_3SPEAK_API_KEY}
+        giphyApiKey={import.meta.env.VITE_GIPHY_KEY}
+        reportedAuthors={ignoredAuthors}
+        reportedPosts={reportedPostsStore.reportedPosts}
         onBack={() => navigate(-1)}
+        onNavigateToPost={(a, p) => navigate(`/post/${a}/${p}`)}
         onUserClick={(user) => navigate(`/user/${user}`)}
-        onReport={() => setReportOpen(true)}
+        onReport={() => { setReportTarget(null); setReportOpen(true) }}
         onTip={handleOpenTip}
+        onUpvote={async (percent) => {
+          try {
+            await vote(resolvedAuthor, resolvedPermlink, percent)
+            toast.success('Post upvoted')
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : 'Vote failed'
+            if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
+              toast.info('Vote cancelled')
+            } else {
+              throw e
+            }
+          }
+        }}
         onSubmitComment={async (parentAuthor, parentPermlink, body) => {
-          await comment(parentAuthor, parentPermlink, body)
-          toast.success('Comment posted')
+          try {
+            await comment(parentAuthor, parentPermlink, body)
+            toast.success('Comment posted')
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : 'Comment failed'
+            if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
+              toast.info('Comment cancelled')
+            } else {
+              throw e
+            }
+          }
         }}
         onClickCommentUpvote={async (cAuthor, cPermlink, percent) => {
-          await vote(cAuthor, cPermlink, percent)
-          toast.success('Comment upvoted')
+          try {
+            await vote(cAuthor, cPermlink, percent)
+            toast.success('Comment upvoted')
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : 'Vote failed'
+            if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
+              toast.info('Vote cancelled')
+            } else {
+              throw e
+            }
+          }
+        }}
+        onReblog={async () => {
+          if (!aioha?.isLoggedIn()) { toast.error('Please login to reblog'); return }
+          try {
+            const result = await aioha.reblog(resolvedAuthor, resolvedPermlink, false)
+            if (result?.success) toast.success('Reblogged successfully')
+            else throw new Error((result as any)?.error || 'Reblog failed')
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : 'Reblog failed'
+            if (!msg.toLowerCase().includes('cancel') && !msg.toLowerCase().includes('reject')) toast.error(msg)
+          }
+        }}
+        onShare={() => {
+          const url = `${window.location.origin}/#/post/${resolvedAuthor}/${resolvedPermlink}`
+          navigator.clipboard.writeText(url)
+          toast.success('Post link copied')
+        }}
+        onVotePoll={async (pollAuthor, pollPermlink, choiceNums) => {
+          if (!aioha?.isLoggedIn()) { toast.error('Please login to vote'); return }
+          try {
+            const result = await aioha.customJSON(
+              KeyTypes.Posting,
+              'polls',
+              { poll: `${pollAuthor}/${pollPermlink}`, action: 'vote', choices: choiceNums },
+              'Poll Vote'
+            )
+            if (result?.success) toast.success('Poll vote submitted')
+            else throw new Error((result as any)?.error || 'Poll vote failed')
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : 'Poll vote failed'
+            if (!msg.toLowerCase().includes('cancel') && !msg.toLowerCase().includes('reject')) toast.error(msg)
+          }
+        }}
+        onShareComment={(cAuthor, cPermlink) => {
+          const url = `${window.location.origin}/#/post/${cAuthor}/${cPermlink}`
+          navigator.clipboard.writeText(url)
+          toast.success('Comment link copied')
+        }}
+        onTipComment={(cAuthor, _cPermlink) => {
+          if (!isAuthenticated || !aioha?.isLoggedIn()) { toast.error('Please login to send a tip'); return }
+          setTipError(null)
+          setTipAmount('')
+          setTipToken('HIVE')
+          setTipTarget({ author: cAuthor, permlink: _cPermlink })
+          setShowTipDialog(true)
+        }}
+        onReportComment={(cAuthor, cPermlink) => {
+          setReportTarget({ author: cAuthor, permlink: cPermlink })
+          setReportOpen(true)
         }}
       />
 
       {/* Report modal */}
       <ReportModal
         isOpen={reportOpen}
-        onClose={() => setReportOpen(false)}
+        onClose={() => { setReportOpen(false); setReportTarget(null) }}
         onReport={handleReport}
         reportType="post"
-        targetUsername={resolvedAuthor}
-        targetPermlink={resolvedPermlink}
+        targetUsername={reportTarget?.author ?? resolvedAuthor}
+        targetPermlink={reportTarget?.permlink ?? resolvedPermlink}
       />
 
       {/* Tip dialog */}
@@ -192,7 +290,7 @@ export function PostCommentsPage() {
           <div className="w-full max-w-md rounded-xl border border-[#3a424a] bg-[#262b30] p-5 shadow-2xl">
             <h3 className="text-lg font-semibold text-white">Send tip</h3>
             <p className="mt-1 text-sm text-[#9ca3b0]">
-              Send tip to @{resolvedAuthor}
+              Send tip to @{tipTarget?.author ?? resolvedAuthor}
             </p>
             <div className="mt-4 flex gap-2">
               <input

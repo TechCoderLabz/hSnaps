@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuthData } from "../stores/authStore";
 import { useAioha } from "@aioha/react-provider";
 import { KeyTypes } from "@aioha/aioha";
 import { useProgrammaticAuth } from "hive-authentication";
 import { toast } from "sonner";
+import { getHiveApiNode } from "../stores/hiveNodeStore";
 
 /** Convert percentage (0-100) to Hive vote weight (1% = 100, 100% = 10000) */
 function convertPercentageToWeight(percentage: number): number {
@@ -41,12 +42,48 @@ function generateRandomPermlink(length: number = 8): string {
   return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
 }
 
+const REPLY_SNAP_API = 'https://api-hcurators.sagarkothari88.one/curation/reply-snap';
+
+// Module-level cache so the API is called at most once per token
+let _replySnapCache: { token: string; content: string } | null = null;
+let _replySnapFetching = false;
+
+function fetchReplySnapSuffix(token: string): void {
+  const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  if (_replySnapFetching || (_replySnapCache && _replySnapCache.token === bearerToken)) return;
+  _replySnapFetching = true;
+  fetch(REPLY_SNAP_API, {
+    headers: { Authorization: bearerToken, 'X-Hive-Node': getHiveApiNode() },
+  })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      if (data?.content) _replySnapCache = { token: bearerToken, content: data.content };
+    })
+    .catch(() => { /* ignore */ })
+    .finally(() => { _replySnapFetching = false; });
+}
+
+function getReplySnapSuffix(): string {
+  return _replySnapCache?.content ?? '';
+}
+
 export function useHiveOperations() {
   const { aioha } = useAioha();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { username, currentUser } = useAuthData();
+  const { username, currentUser, token } = useAuthData();
   const { loginWithPrivateKey } = useProgrammaticAuth(aioha!);
+
+  // Trigger a single fetch when token becomes available
+  useEffect(() => {
+    if (token) fetchReplySnapSuffix(token);
+  }, [token]);
+
+  /** Append the reply-snap suffix to a body string */
+  const withSuffix = useCallback((body: string) => {
+    const suffix = getReplySnapSuffix();
+    return suffix ? body + suffix : body;
+  }, []);
 
   const serverCallback = useCallback(async () => {
     const serverResponse = currentUser?.serverResponse;
@@ -135,6 +172,7 @@ export function useHiveOperations() {
           format: 'markdown',
         });
 
+        const finalBody = withSuffix(body);
         // Build operations — add comment_options with beneficiaries if audio/video present
         const operations: any[] = [
           ['comment', {
@@ -143,7 +181,7 @@ export function useHiveOperations() {
             author: username,
             permlink,
             title: commentTitle,
-            body,
+            body: finalBody,
             json_metadata: metadata
           }]
         ];
@@ -192,12 +230,13 @@ export function useHiveOperations() {
           await ensureProgrammaticAuth();
         }
         const commentTitle = title || "";
+        const finalBody = withSuffix(body);
         const result = await aioha.comment(
           parentAuthor,
           parentPermlink,
           permlink,
           commentTitle,
-          body,
+          finalBody,
           jsonMetadata ?? JSON.stringify({
             app: 'peakd/2026.3.1',
             developer: DEVELOPER_ACCOUNT,
@@ -242,6 +281,7 @@ export function useHiveOperations() {
         if (getPrivatePostingKey()) {
           await ensureProgrammaticAuth();
         }
+        const finalBody = withSuffix(body);
         const operations: any[] = [];
         items.forEach(({ parentAuthor, parentPermlink, jsonMetadata }) => {
           const perm = generateRandomPermlink(8);
@@ -253,7 +293,7 @@ export function useHiveOperations() {
               author: username,
               permlink: perm,
               title: title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim()),
-              body,
+              body: finalBody,
               json_metadata: jsonMetadata,
             },
           ]);
@@ -302,6 +342,7 @@ export function useHiveOperations() {
         const hiveWeight = convertPercentageToWeight(weight);
         const permlink = generateRandomPermlink(8);
         const commentTitle = title || `Re: ${parentAuthor}'s post`;
+        const finalBody = withSuffix(body);
         const operations: any[] = [
           [
             "vote",
@@ -320,7 +361,7 @@ export function useHiveOperations() {
               author: username,
               permlink,
               title: commentTitle,
-              body,
+              body: finalBody,
               json_metadata: JSON.stringify({
                 tags: ["hivepolls"],
                 app: "hivepolls/1.0.0",
