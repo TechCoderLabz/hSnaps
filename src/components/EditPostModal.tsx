@@ -4,7 +4,7 @@
  */
 import React, { useState, useRef, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
-import { useHiveOperations } from '../hooks/useHiveOperations'
+import { useHiveOperations, stripAppSuffix } from '../hooks/useHiveOperations'
 import { parseBodyFromMarkdown } from '../utils/postBody'
 import { ParsedBodyContent } from './FeedItemBody'
 import ImageUploader from './ImageUploader'
@@ -35,7 +35,7 @@ const EMOJIS = [
 
 export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModalProps) {
   const { editPost } = useHiveOperations()
-  const [body, setBody] = useState(post.body)
+  const [body, setBody] = useState(() => stripAppSuffix(post.body))
   const [showPreview, setShowPreview] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGiphyOpen, setIsGiphyOpen] = useState(false)

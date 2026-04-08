@@ -207,6 +207,7 @@ export function PostCommentsPage() {
             const msg = e instanceof Error ? e.message : 'Comment failed'
             if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
               toast.info('Comment cancelled')
+              return false // signal cancellation — preserves composer text
             } else {
               throw e
             }
@@ -254,7 +255,12 @@ export function PostCommentsPage() {
             else throw new Error((result as any)?.error || 'Poll vote failed')
           } catch (e) {
             const msg = e instanceof Error ? e.message : 'Poll vote failed'
-            if (!msg.toLowerCase().includes('cancel') && !msg.toLowerCase().includes('reject')) toast.error(msg)
+            if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
+              toast.info('Poll vote cancelled')
+              return false // signal cancellation — don't mark as voted
+            }
+            toast.error(msg)
+            return false
           }
         }}
         onShareComment={(cAuthor, cPermlink) => {

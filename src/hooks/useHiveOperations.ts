@@ -67,6 +67,25 @@ function getReplySnapSuffix(): string {
   return _replySnapCache?.content ?? '';
 }
 
+/** Known app suffix patterns to strip from post body when editing */
+const APP_SUFFIX_PATTERNS = [
+  /\s*(?:<br\s*\/?>)?\s*<sub>\[via Apps from\]\(https:\/\/linktr\.ee\/sagarkothari88\)<\/sub>\s*$/,
+];
+
+/** Strip known app suffixes from body text (e.g. for pre-filling edit textarea) */
+export function stripAppSuffix(body: string): string {
+  let cleaned = body;
+  for (const pattern of APP_SUFFIX_PATTERNS) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  // Also strip the dynamic reply-snap suffix if cached
+  const suffix = getReplySnapSuffix();
+  if (suffix && cleaned.endsWith(suffix)) {
+    cleaned = cleaned.slice(0, -suffix.length);
+  }
+  return cleaned.trimEnd();
+}
+
 export function useHiveOperations() {
   const { aioha } = useAioha();
   const [loading, setLoading] = useState(false);
@@ -82,7 +101,8 @@ export function useHiveOperations() {
   /** Append the reply-snap suffix to a body string */
   const withSuffix = useCallback((body: string) => {
     const suffix = getReplySnapSuffix();
-    return suffix ? body + suffix : body;
+    if (!suffix || body.includes(suffix.trim())) return body;
+    return body + suffix;
   }, []);
 
   const serverCallback = useCallback(async () => {
