@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAioha } from '@aioha/react-provider'
 import { KeyTypes } from '@aioha/aioha'
 import { HiveDetailPost } from 'hive-react-kit'
-import { ReportModal } from 'hive-authentication'
+import { ReportModal, useAuthStore } from 'hive-authentication'
 import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
@@ -39,6 +39,7 @@ export function PostCommentsPage() {
   const { aioha } = useAioha()
   const { isAuthenticated, username: currentUsername, ecencyToken, token } = useAuthData()
   const { comment, vote } = useHiveOperations()
+  const haAuthStore = useAuthStore()
   const addIgnoredAuthor = useIgnoredAuthorsStore((s) => s.addAuthor)
   const ignoredAuthors = useIgnoredAuthorsStore((s) => s.list)
   const reportedPostsStore = useReportedPostsStore()
@@ -62,11 +63,12 @@ export function PostCommentsPage() {
     )
   }
 
-  const handleOpenTip = () => {
-    if (!isAuthenticated || !aioha?.isLoggedIn()) {
-      toast.error('Please login to send a tip')
-      return
-    }
+  const handleOpenTip = () => async () => {
+    await haAuthStore.switchToPostingForCurrentUser()
+    // if (!isAuthenticated || !aioha?.isLoggedIn()) {
+    //   toast.error('Please login to send a tip')
+    //   return
+    // }
     setTipError(null)
     setTipAmount('')
     setTipToken('HIVE')
@@ -75,10 +77,11 @@ export function PostCommentsPage() {
   }
 
   const handleSubmitTip = async () => {
-    if (!isAuthenticated || !aioha?.isLoggedIn()) {
-      toast.error('Please login to send a tip')
-      return
-    }
+    await haAuthStore.switchToPostingForCurrentUser()
+    // if (!isAuthenticated || !aioha?.isLoggedIn()) {
+    //   toast.error('Please login to send a tip')
+    //   return
+    // }
     const parsed = Number.parseFloat(tipAmount)
     if (!Number.isFinite(parsed) || parsed <= 0) {
       setTipError('Enter a valid amount greater than 0.')
@@ -90,6 +93,7 @@ export function PostCommentsPage() {
     setTipError(null)
     try {
       const amount = `${parsed.toFixed(3)} ${tipToken}`
+      await haAuthStore.switchToPostingForCurrentUser()
       const result = await aioha.signAndBroadcastTx(
         [[
           'transfer',
@@ -229,6 +233,7 @@ export function PostCommentsPage() {
         onReblog={async () => {
           if (!aioha?.isLoggedIn()) { toast.error('Please login to reblog'); return }
           try {
+            await haAuthStore.switchToPostingForCurrentUser()
             const result = await aioha.reblog(resolvedAuthor, resolvedPermlink, false)
             if (result?.success) toast.success('Reblogged successfully')
             else throw new Error((result as any)?.error || 'Reblog failed')
@@ -243,8 +248,9 @@ export function PostCommentsPage() {
           toast.success('Post link copied')
         }}
         onVotePoll={async (pollAuthor, pollPermlink, choiceNums) => {
-          if (!aioha?.isLoggedIn()) { toast.error('Please login to vote'); return }
+          // if (!aioha?.isLoggedIn()) { toast.error('Please login to vote'); return }
           try {
+            await haAuthStore.switchToPostingForCurrentUser()
             const result = await aioha.customJSON(
               KeyTypes.Posting,
               'polls',

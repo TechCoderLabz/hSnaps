@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useAuthData } from "../stores/authStore";
 import { useAioha } from "@aioha/react-provider";
 import { KeyTypes } from "@aioha/aioha";
-import { useProgrammaticAuth } from "hive-authentication";
+import { useProgrammaticAuth, useAuthStore } from "hive-authentication";
 import { toast } from "sonner";
 import { getHiveApiNode } from "../stores/hiveNodeStore";
 
@@ -92,6 +92,7 @@ export function useHiveOperations() {
   const [error, setError] = useState<string | null>(null);
   const { username, currentUser, token } = useAuthData();
   const { loginWithPrivateKey } = useProgrammaticAuth(aioha!);
+  const haAuthStore = useAuthStore();
 
   // Trigger a single fetch when token becomes available
   useEffect(() => {
@@ -144,6 +145,7 @@ export function useHiveOperations() {
         if (getPrivatePostingKey()) {
           await ensureProgrammaticAuth();
         }
+        await haAuthStore.switchToPostingForCurrentUser();
         const hiveWeight = convertPercentageToWeight(weight);
         const result = await aioha.vote(author, permlink, hiveWeight);
         if (!result.success) {
@@ -183,6 +185,7 @@ export function useHiveOperations() {
         if (getPrivatePostingKey()) {
           await ensureProgrammaticAuth();
         }
+        await haAuthStore.switchToPostingForCurrentUser();
         const permlink = generateRandomPermlink(8);
         const commentTitle = title || (parentAuthor ? `Re: ${parentAuthor}'s post` : body.slice(0, 50).trim());
         const metadata = jsonMetadata ?? JSON.stringify({
@@ -249,6 +252,7 @@ export function useHiveOperations() {
         if (getPrivatePostingKey()) {
           await ensureProgrammaticAuth();
         }
+        await haAuthStore.switchToPostingForCurrentUser();
         const commentTitle = title || "";
         const finalBody = withSuffix(body);
         const result = await aioha.comment(
@@ -301,6 +305,7 @@ export function useHiveOperations() {
         if (getPrivatePostingKey()) {
           await ensureProgrammaticAuth();
         }
+        await haAuthStore.switchToPostingForCurrentUser();
         const finalBody = withSuffix(body);
         const operations: any[] = [];
         items.forEach(({ parentAuthor, parentPermlink, jsonMetadata }) => {
@@ -359,6 +364,7 @@ export function useHiveOperations() {
         if (getPrivatePostingKey()) {
           await ensureProgrammaticAuth();
         }
+        await haAuthStore.switchToPostingForCurrentUser();
         const hiveWeight = convertPercentageToWeight(weight);
         const permlink = generateRandomPermlink(8);
         const commentTitle = title || `Re: ${parentAuthor}'s post`;

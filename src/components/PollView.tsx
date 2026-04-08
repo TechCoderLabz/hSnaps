@@ -9,12 +9,12 @@
  */
 import { useAioha } from '@aioha/react-provider'
 import { KeyTypes } from '@aioha/aioha'
-import type { SignOperationResult } from '@aioha/aioha'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { fetchPollResults } from '../services/pollService'
 import type { PollApiResponse } from '../services/pollService'
 import { useAuthData } from '../stores/authStore'
+import { useAuthStore } from 'hive-authentication'
 
 export interface ParsedPollData {
   content_type: 'poll'
@@ -52,6 +52,7 @@ interface PollViewProps {
 export function PollView({ poll, author, permlink }: PollViewProps) {
   const { aioha } = useAioha()
   const { isAuthenticated, username } = useAuthData()
+  const haAuthStore = useAuthStore()
 
   const [apiData, setApiData] = useState<PollApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -163,10 +164,10 @@ export function PollView({ poll, author, permlink }: PollViewProps) {
   }
 
   const handleVote = async () => {
-    if (!aioha || !aioha.isLoggedIn()) {
-      toast.error('Please login to vote')
-      return
-    }
+    // if (!aioha || !aioha.isLoggedIn()) {
+    //   toast.error('Please login to vote')
+    //   return
+    // }
     if (selectedChoices.length === 0) {
       toast.error('Please select at least one option')
       return
@@ -178,7 +179,8 @@ export function PollView({ poll, author, permlink }: PollViewProps) {
         action: 'vote',
         choices: selectedChoices,
       }
-      const result: SignOperationResult = await aioha.customJSON(
+      await haAuthStore.switchToPostingForCurrentUser()
+      const result = await aioha.customJSON(
         KeyTypes.Posting,
         'polls',
         pollJson,

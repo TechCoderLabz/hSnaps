@@ -1,12 +1,13 @@
 /**
- * "Add to bookmark" button: calls bookmark API with author, permlink, title, body.
- * Shown only when authenticated. Uses token from auth store.
+ * Bookmark toggle button: adds or removes bookmark for a post.
+ * Shows filled icon when bookmarked, empty when not.
+ * Uses global bookmark store so state is shared across all instances.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
-import { addBookmark } from '../services/bookmarkService'
+import { useBookmarkStore } from '../stores/bookmarkStore'
 
 interface AddBookmarkButtonProps {
   author: string
@@ -23,10 +24,22 @@ export function AddBookmarkButton({
   title,
   body,
   className = '',
-  ariaLabel = 'Add to bookmarks',
+  ariaLabel = 'Bookmark',
 }: AddBookmarkButtonProps) {
   const { token, isAuthenticated } = useAuthData()
   const [submitting, setSubmitting] = useState(false)
+  const bookmarked = useBookmarkStore((s) => s.isBookmarked(author, permlink))
+  const loaded = useBookmarkStore((s) => s.loaded)
+  const fetchBookmarks = useBookmarkStore((s) => s.fetchBookmarks)
+  const addBm = useBookmarkStore((s) => s.add)
+  const removeBm = useBookmarkStore((s) => s.remove)
+
+  // Fetch bookmarks once when authenticated
+  useEffect(() => {
+    if (isAuthenticated && token && !loaded) {
+      void fetchBookmarks(token)
+    }
+  }, [isAuthenticated, token, loaded, fetchBookmarks])
 
   if (!isAuthenticated || !token) return null
 
@@ -34,10 +47,15 @@ export function AddBookmarkButton({
     if (submitting) return
     setSubmitting(true)
     try {
-      await addBookmark(token, { author, permlink, title, body })
-      toast.success('Added to bookmarks')
+      if (bookmarked) {
+        await removeBm(token, author, permlink)
+        toast.success('Bookmark removed')
+      } else {
+        await addBm(token, author, permlink, title, body)
+        toast.success('Added to bookmarks')
+      }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to add bookmark')
+      toast.error(e instanceof Error ? e.message : 'Bookmark action failed')
     } finally {
       setSubmitting(false)
     }
@@ -54,7 +72,7 @@ export function AddBookmarkButton({
       {submitting ? (
         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#9ca3b0] border-t-transparent" />
       ) : (
-        <Bookmark className="h-4 w-4" />
+        <Bookmark className={`h-4 w-4 ${bookmarked ? 'fill-current text-[#e31337]' : ''}`} />
       )}
     </button>
   )

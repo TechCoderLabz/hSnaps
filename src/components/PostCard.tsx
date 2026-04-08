@@ -28,6 +28,7 @@ import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
 import { useMomentStore } from '../stores/momentStore'
 import { isIOS } from '../utils/platform-detection'
+import { useAuthStore } from 'hive-authentication'
 
 const HIVE_AVATAR = (username: string) =>
   `https://images.hive.blog/u/${username}/avatar`
@@ -61,6 +62,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   const { aioha } = useAioha()
   const { isAuthenticated, username } = useAuthData()
   const { editPost } = useHiveOperations()
+  const haAuthStore = useAuthStore()
   const navigate = useNavigate()
   const [showUpvoteSlider, setShowUpvoteSlider] = useState(false)
   const [showUpvoteList, setShowUpvoteList] = useState(false)
@@ -112,14 +114,15 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
       toast.info('Please Login')
       return false
     }
-    if (!aioha || !aioha.isLoggedIn()) {
-      toast.error('Please login with HiveAuth/Keychain')
-      return false
-    }
+    // if (!aioha || !aioha.isLoggedIn()) {
+    //   toast.error('Please login with HiveAuth/Keychain')
+    //   return false
+    // }
     return true
   }
 
   const handleUpvote = async (author: string, permlink: string, percent: number) => {
+    await haAuthStore.switchToPostingForCurrentUser();
     if (!ensureCanAct()) return
     if (hasUserUpvoted) {
       toast.info('you have already voted this post')
@@ -176,6 +179,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const openVoteSlider = async (): Promise<boolean> => {
+    await haAuthStore.switchToPostingForCurrentUser()
     if (!ensureCanAct()) return false
     if (hasUserUpvoted) {
       toast.info('you have already voted this post')
@@ -194,6 +198,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleReblogClick = async () => {
+    await haAuthStore.switchToPostingForCurrentUser()
     if (!ensureCanAct()) return
     setCheckingReblog(true)
     try {
@@ -205,6 +210,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleConfirmReblog = async () => {
+    await haAuthStore.switchToPostingForCurrentUser()
     if (!ensureCanAct()) return
     setReblogSubmitting(true)
     try {
@@ -245,7 +251,8 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
     }
   }
 
-  const handleOpenTipDialog = () => {
+  const handleOpenTipDialog = async () => {
+    await haAuthStore.switchToPostingForCurrentUser()
     if (!ensureCanAct()) return
     setTipError(null)
     setTipAmount('')
@@ -254,6 +261,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleSubmitTip = async () => {
+    await haAuthStore.switchToPostingForCurrentUser()
     if (!ensureCanAct()) return
     const parsed = Number.parseFloat(tipAmount)
     if (!Number.isFinite(parsed) || parsed <= 0) {
