@@ -13,6 +13,7 @@ import { useAuthData } from '../stores/authStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useReportedPostsStore } from '../stores/reportedPostsStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
+import { isMobilePlatform } from '../utils/platform-detection'
 
 const REPORT_API_URL = 'https://hreplier-api.sagarkothari88.one/report-post'
 
@@ -167,6 +168,7 @@ export function PostCommentsPage() {
   )
 
   return (
+    <div className={`h-screen overflow-hidden ${isMobilePlatform() ? 'mobile-safe-area-top' : ''}`}>
     <PostErrorBoundary fallback={errorFallback}>
       <HiveDetailPost
         author={resolvedAuthor}
@@ -338,5 +340,6 @@ export function PostCommentsPage() {
         </div>
       )}
     </PostErrorBoundary>
+    </div>
   )
 }

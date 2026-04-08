@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
 import { useReportedPostsStore } from '../stores/reportedPostsStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
+import { isMobilePlatform } from '../utils/platform-detection'
 
 /** Catches render errors from UserDetailProfile so the whole app doesn't crash. */
 class ProfileErrorBoundary extends Component<
@@ -72,7 +73,7 @@ export function UserProfilePage() {
   )
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#212529] text-[#f0f0f8]">
+    <div className={`flex h-screen flex-col overflow-hidden bg-[#212529] text-[#f0f0f8] ${isMobilePlatform() ? 'mobile-safe-area-top' : ''}`}>
       <ProfileErrorBoundary fallback={errorFallback}>
         <UserDetailProfile
           username={profileUsername}

@@ -15,8 +15,8 @@ export function ThreeSpeakPlayer({ author, permlink, className = '' }: ThreeSpea
 
   return (
     <div
-      className={`three-speak-embed my-3 overflow-hidden rounded-lg bg-black ${className}`}
-      style={{ aspectRatio: '9/16', maxWidth: '450px', margin: '0 auto' }}
+      className={`three-speak-embed my-3 overflow-hidden rounded-lg bg-black/40 p-3 ${className}`}
+      style={{ aspectRatio: '9/16', maxWidth: '380px', margin: '0 auto' }}
     >
       <iframe
         src={src}

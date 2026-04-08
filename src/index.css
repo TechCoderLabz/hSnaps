@@ -25,6 +25,13 @@ body {
   padding-top: env(safe-area-inset-top, 0px) !important;
 }
 
+/* Mobile safe-area wrapper: constrains height below the notch so child
+   components with overflow-y-auto + sticky headers work correctly */
+.mobile-safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+}
+
 .hive-surface {
   background: #262b30;
   border: 1px solid #363c43;

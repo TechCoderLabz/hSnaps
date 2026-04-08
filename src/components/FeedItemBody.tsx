@@ -14,6 +14,7 @@ import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
 import { getHiveProxyThumbnailUrl } from '../utils/imageProxy'
 import { useVideoPlaybackStore } from '../stores/videoPlaybackStore'
+import { isMobilePlatform } from '../utils/platform-detection'
 
 /* ------------------------------------------------------------------ */
 /*  Shared text helpers                                               */
@@ -256,13 +257,13 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-black/90 sm:items-center sm:justify-center sm:bg-black/85 sm:p-6"
+      className="fixed inset-0 z-[100] flex flex-col bg-black/10 sm:items-center sm:justify-center sm:bg-black/85 sm:p-6"
       role="dialog"
       aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Header bar with close button — always at top, never overlapping content */}
-      <div className="flex shrink-0 items-center justify-between px-4 py-3 sm:hidden">
+      <div className={`flex shrink-0 items-center justify-between px-4 py-3 sm:hidden ${isMobilePlatform() ? 'pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] bg-black/30' : ''}`}>
         <span className="text-sm font-medium text-white/70">{attachmentLabel(attachment)}</span>
         <button
           type="button"
@@ -293,7 +294,10 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
           </button>
         </div>
 
-        <div className="flex flex-1 flex-col items-center justify-center p-3 sm:p-4">
+        <div
+          className="flex flex-1 flex-col items-center justify-center p-3 sm:p-4"
+          onClick={(e) => e.target === e.currentTarget && onClose()}
+        >
           {attachment.kind === 'youtube' && (
             <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
               <iframe

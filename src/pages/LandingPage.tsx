@@ -19,15 +19,10 @@ import {
   Film,
   LayoutGrid,
   Tag,
-  Compass,
-  Layers,
-  Lightbulb,
-  Info,
   Video,
   MessageSquare,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { AppHeader } from '../components/AppHeader'
 import { isMobilePlatform, isIOS } from '../utils/platform-detection'
 import {
   APP_STORE_URL,
@@ -78,17 +73,6 @@ const HIGHLIGHTS: { label: string; icon: LucideIcon }[] = [
   { label: 'Multi-account support', icon: RefreshCw },
 ]
 
-const LANDING_NAV: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: 'discover', label: 'Discover', icon: Compass },
-  { id: 'features', label: 'Features', icon: Layers },
-  { id: 'why-hsnaps', label: 'Why hSnaps', icon: Lightbulb },
-  { id: 'about-us', label: 'About Us', icon: Info },
-]
-
-function scrollToSection(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-}
-
 export function LandingPage() {
   const isWeb = !isMobilePlatform()
   const ios = isIOS()
@@ -97,29 +81,8 @@ export function LandingPage() {
       {/* Subtle gradient background */}
       <div className="fixed inset-0 bg-gradient-to-br from-[#3a1118]/45 via-[#212529] to-[#2b3138] pointer-events-none" />
       <div className="relative">
-        <AppHeader
-          className="sticky top-0 z-30 border-b border-[#3a424a] bg-[#212529]"
-          hideBrandOnMobile
-          center={
-            <>
-              {LANDING_NAV.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => scrollToSection(id)}
-                  className="flex items-center gap-1.5 text-sm font-medium text-[#c8cad6] transition hover:text-[#f0f0f8] focus:outline-none focus:ring-2 focus:ring-[#e31337]/50 rounded px-1"
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                  {label}
-                </button>
-              ))}
-            </>
-          }
-          right={null}
-        />
-
         {/* Hero */}
-        <section className="px-4 pt-12 pb-20 text-center sm:px-8 sm:pt-24">
+        <section className="px-4 py-20 text-center sm:px-8 sm:pt-24">
           <img
             src="/logo.png"
             alt="hSnaps"
