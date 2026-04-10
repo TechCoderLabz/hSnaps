@@ -36,7 +36,7 @@ function extractImageUrlsFromMarkdown(md: string): string[] {
 }
 
 const DEVELOPER = 'sagarkothari88'
-const DEFAULT_TAGS = ['hsnaps', 'hreplier', 'hstats', 'hfestfacts', 'sagarkothari88']
+const DEFAULT_TAGS = ['hsnaps']
 
 /** Build app-specific json_metadata for each feed type. */
 function buildJsonMetadataForFeed(

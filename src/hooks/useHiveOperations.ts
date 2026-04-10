@@ -191,7 +191,7 @@ export function useHiveOperations() {
         const metadata = jsonMetadata ?? JSON.stringify({
           app: 'peakd/2026.3.1',
           developer: DEVELOPER_ACCOUNT,
-          tags: ['hsnaps', 'hreplier', 'hstats', 'hfestfacts', DEVELOPER_ACCOUNT],
+          tags: ['hsnaps'],
           format: 'markdown',
         });
 
@@ -264,7 +264,7 @@ export function useHiveOperations() {
           jsonMetadata ?? JSON.stringify({
             app: 'peakd/2026.3.1',
             developer: DEVELOPER_ACCOUNT,
-            tags: ['hsnaps', 'hreplier', 'hstats', 'hfestfacts', DEVELOPER_ACCOUNT],
+            tags: ['hsnaps'],
             format: 'markdown',
           })
         );
