@@ -13,7 +13,7 @@ import { useAuthData } from '../stores/authStore'
 import { useReportedPostsStore } from '../stores/reportedPostsStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
-import { isMobilePlatform } from '../utils/platform-detection'
+import { isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
 
 /** Catches render errors from UserDetailProfile so the whole app doesn't crash. */
 class ProfileErrorBoundary extends Component<
@@ -263,12 +263,19 @@ export function UserProfilePage() {
           onActivityPermlink={(author, permlink) => {
             navigate(`/post/${author}/${permlink}`)
           }}
-          onShare={() => {
-            const url = `${window.location.origin}/#/user/${profileUsername}`
-            if (navigator.share) {
-              void navigator.share({ url, title: `Profile of @${profileUsername}` })
-            } else {
-              void navigator.clipboard.writeText(url)
+          onShare={async () => {
+            const url = `${getShareBaseUrl()}/#/user/${profileUsername}`
+            try {
+              if (!isMobilePlatform() && navigator.share) {
+                await navigator.share({ url, title: `Profile of @${profileUsername}` })
+                toast.success('Link shared')
+              } else {
+                await navigator.clipboard.writeText(url)
+                toast.success('Link copied')
+              }
+            } catch {
+              // toast.error('Could not share link')
+              console.error('Share failed')
             }
           }}
         />

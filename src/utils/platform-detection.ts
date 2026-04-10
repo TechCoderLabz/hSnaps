@@ -24,3 +24,13 @@ export const isIOS = (): boolean => {
 export const getPlatform = (): string => {
   return Capacitor.getPlatform();
 };
+
+/**
+ * Returns the base URL used for shareable links.
+ * On mobile (Capacitor) `window.location.origin` is `capacitor://localhost`
+ * or similar, which is useless for sharing — so we hard-code the web URL.
+ */
+export const getShareBaseUrl = (): string => {
+  if (isMobilePlatform()) return "https://hsnaps.sagarkothari88.one";
+  return window.location.origin;
+};

@@ -13,7 +13,7 @@ import { useAuthData } from '../stores/authStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useReportedPostsStore } from '../stores/reportedPostsStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
-import { isMobilePlatform } from '../utils/platform-detection'
+import { isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
 
 const REPORT_API_URL = 'https://hreplier-api.sagarkothari88.one/report-post'
 
@@ -242,10 +242,20 @@ export function PostCommentsPage() {
             if (!msg.toLowerCase().includes('cancel') && !msg.toLowerCase().includes('reject')) toast.error(msg)
           }
         }}
-        onShare={() => {
-          const url = `${window.location.origin}/#/post/${resolvedAuthor}/${resolvedPermlink}`
-          navigator.clipboard.writeText(url)
-          toast.success('Post link copied')
+        onShare={async () => {
+          const url = `${getShareBaseUrl()}/#/post/${resolvedAuthor}/${resolvedPermlink}`
+          try {
+            if (!isMobilePlatform() && navigator.share) {
+              await navigator.share({ url, title: `Post by @${resolvedAuthor}` })
+              toast.success('Link shared')
+            } else {
+              await navigator.clipboard.writeText(url)
+              toast.success('Post link copied')
+            }
+          } catch {
+            // toast.error('Could not share link')
+            console.log('Share failed')
+          }
         }}
         onVotePoll={async (pollAuthor, pollPermlink, choiceNums) => {
           // if (!aioha?.isLoggedIn()) { toast.error('Please login to vote'); return }
@@ -269,10 +279,20 @@ export function PostCommentsPage() {
             return false
           }
         }}
-        onShareComment={(cAuthor, cPermlink) => {
-          const url = `${window.location.origin}/#/post/${cAuthor}/${cPermlink}`
-          navigator.clipboard.writeText(url)
-          toast.success('Comment link copied')
+        onShareComment={async (cAuthor, cPermlink) => {
+          const url = `${getShareBaseUrl()}/#/post/${cAuthor}/${cPermlink}`
+          try {
+            if (!isMobilePlatform() && navigator.share) {
+              await navigator.share({ url, title: `Comment by @${cAuthor}` })
+              toast.success('Link shared')
+            } else {
+              await navigator.clipboard.writeText(url)
+              toast.success('Comment link copied')
+            }
+          } catch {
+            // toast.error('Could not share link')
+            console.log('Share failed')
+          }
         }}
         onTipComment={(cAuthor, _cPermlink) => {
           if (!isAuthenticated || !aioha?.isLoggedIn()) { toast.error('Please login to send a tip'); return }

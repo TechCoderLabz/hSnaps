@@ -27,7 +27,7 @@ import { useSnapsStore } from '../stores/snapsStore'
 import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
 import { useMomentStore } from '../stores/momentStore'
-import { isIOS } from '../utils/platform-detection'
+import { isIOS, isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
 import { useAuthStore } from 'hive-authentication'
 
 const HIVE_AVATAR = (username: string) =>
@@ -238,16 +238,18 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleShare = async () => {
-    const postUrl = `${window.location.origin}/#/post/${post.author}/${post.permlink}`
+    const postUrl = `${getShareBaseUrl()}/#/post/${post.author}/${post.permlink}`
     try {
-      if (navigator.share) {
+      if (!isMobilePlatform() && navigator.share) {
         await navigator.share({ url: postUrl, title: `Post by @${post.author}` })
+        toast.success('Link shared')
       } else {
         await navigator.clipboard.writeText(postUrl)
+        toast.success('Link copied')
       }
-      toast.success('Link shared')
     } catch {
-      toast.error('Could not share link')
+      // toast.error('Could not share link')
+      console.error('Share failed')
     }
   }
 
@@ -414,7 +416,14 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
       </div>
 
       {/* Body: plain text + swipable images, 3speak, Twitter, YouTube */}
-      <div className="px-4 pt-2 pb-1 overflow-hidden">
+      <div
+        className="px-4 pt-2 pb-1 overflow-hidden cursor-pointer"
+        onClick={(e) => {
+          const target = e.target as HTMLElement
+          if (target.closest('a, button, input, textarea, select, video, iframe, img, [role="button"]')) return
+          handleCommentRoute()
+        }}
+      >
         <FeedItemBody
           post={post}
           hideImages={contentHas3SpeakEmbed(post.body, post.json_metadata)}
