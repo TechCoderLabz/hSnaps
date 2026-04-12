@@ -16,7 +16,7 @@ export const SUPPORTERS = [
   {
     title: 'Cheered by @starkerz',
     description: 'Community supporter',
-    avatar: 'https://images.ecency.com/webp/u/starkerz/avatar/medium',
+    avatar: 'https://images.hive.blog/u/starkerz/avatar',
     link: 'https://peakd.com/@starkerz',
     buttonText: 'View',
     color: 'bg-emerald-600 hover:bg-emerald-700',
@@ -24,7 +24,7 @@ export const SUPPORTERS = [
   {
     title: 'Encouraged by @theycallmedan',
     description: 'Hive advocate & supporter',
-    avatar: 'https://images.ecency.com/webp/u/theycallmedan/avatar/medium',
+    avatar: 'https://images.hive.blog/u/theycallmedan/avatar',
     link: 'https://peakd.com/@theycallmedan',
     buttonText: 'View',
     color: 'bg-amber-600 hover:bg-amber-700',
@@ -32,7 +32,7 @@ export const SUPPORTERS = [
   {
     title: 'Github',
     description: "It's all open source",
-    avatar: 'https://avatars.githubusercontent.com/u/259840578?s=200&v=4',
+    avatar: 'https://images.hive.blog/0x0/https://avatars.githubusercontent.com/u/259840578?s=200&v=4',
     link: 'https://github.com/orgs/TechCoderLabz/repositories',
     buttonText: 'View',
     color: 'bg-[#e31337] hover:bg-[#c51231]',
@@ -40,7 +40,7 @@ export const SUPPORTERS = [
   {
     title: 'Inspired by @peakd\'s Snaps',
     description: 'Great Dev @asgarth\'s Peakd-Snaps',
-    avatar: 'https://images.ecency.com/webp/u/asgarth/avatar/medium',
+    avatar: 'https://images.hive.blog/u/asgarth/avatar',
     link: 'https://peakd.com/@asgarth',
     buttonText: 'View',
     color: 'bg-blue-600 hover:bg-blue-700',

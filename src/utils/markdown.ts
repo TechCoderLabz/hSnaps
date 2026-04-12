@@ -1,3 +1,5 @@
+import { proxyImageUrl } from './imageProxy'
+
 /** Escape HTML for safe use in attributes and text. */
 function escapeHtml(s: string): string {
   return s
@@ -74,16 +76,24 @@ export function markdownToHtml(markdown: string): string {
   
   let html = markdown;
 
-  // Replace images first
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<div class="my-6"><img src="$2" alt="$1" class="max-w-full rounded-lg shadow-lg border border-slate-800/50 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" onclick="window.open(\'$2\', \'_blank\')" /></div>');
+  // Replace images first — proxy all URLs and escape alt text
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match: string, alt: string, url: string) => {
+    const proxied = escapeHtml(proxyImageUrl(url.trim(), 640))
+    const safeAlt = escapeHtml(alt)
+    return `<div class="my-6"><img src="${proxied}" alt="${safeAlt}" class="max-w-full rounded-lg shadow-lg border border-slate-800/50 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" /></div>`
+  });
 
   // Headers
   html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-6 mb-3 text-white">$1</h3>');
   html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-7 mb-4 text-white">$1</h2>');
   html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-8 mb-5 text-white">$1</h1>');
 
-  // Links (but not images which we already processed)
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-teal-400 hover:text-teal-300 underline">$1</a>');
+  // Links (but not images which we already processed) — escape href and text
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match: string, text: string, url: string) => {
+    const safeHref = escapeHtml(url.trim())
+    const safeText = escapeHtml(text)
+    return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="text-teal-400 hover:text-teal-300 underline">${safeText}</a>`
+  });
 
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');

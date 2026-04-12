@@ -12,7 +12,7 @@ import { parsePostBody, plainTextToSegments } from '../utils/postBody'
 import { openLink } from '../utils/openLink'
 import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
-import { getHiveProxyThumbnailUrl } from '../utils/imageProxy'
+import { getHiveProxyThumbnailUrl, proxyImageUrl } from '../utils/imageProxy'
 import { useVideoPlaybackStore } from '../stores/videoPlaybackStore'
 import { isMobilePlatform } from '../utils/platform-detection'
 
@@ -190,7 +190,7 @@ const PLACEHOLDER_BG: Record<Attachment['kind'], string> = {
 
 function PlaceholderCard({ attachment, onClick }: { attachment: Attachment; onClick: () => void }) {
   if (attachment.kind === 'youtube') {
-    const thumbUrl = `https://img.youtube.com/vi/${attachment.id}/mqdefault.jpg`
+    const thumbUrl = proxyImageUrl(`https://img.youtube.com/vi/${attachment.id}/mqdefault.jpg`, 320)
     return (
       <button
         type="button"
@@ -580,7 +580,7 @@ export function ParsedBodyContent({
             {parsed.imageUrls.map((url) => (
               <img
                 key={url}
-                src={url}
+                src={proxyImageUrl(url, 400)}
                 alt=""
                 className="rounded-lg object-cover w-full aspect-square max-h-40"
                 loading="lazy"

@@ -133,7 +133,7 @@ export function SettingsPage() {
         >
           <span className="flex items-center gap-3 font-medium">
             <img
-              src="https://cdn.simpleicons.org/discord/5865F2"
+              src="https://images.hive.blog/0x0/https://cdn.simpleicons.org/discord/5865F2"
               alt=""
               className="h-5 w-5 shrink-0"
               width={20}

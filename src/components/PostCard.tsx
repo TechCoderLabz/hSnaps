@@ -512,7 +512,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           </button>
         )}
 
-        {post.payout > 0 && (
+        {!isIOS() && post.payout > 0 && (
           <span className="shrink-0 text-xs font-medium text-[#22c55e]">
             ${post.payout.toFixed(2)}
           </span>

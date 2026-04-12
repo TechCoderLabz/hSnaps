@@ -272,8 +272,8 @@ export function isAudioUrl(url: string): boolean {
   return AUDIO_EXT.test(url.trim())
 }
 
-/** Common image file extensions (case-insensitive). */
-const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i
+/** Common image file extensions (case-insensitive). SVG excluded — XSS vector. */
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp)(\?|$)/i
 /** Known image host path patterns (path contains /image or similar). */
 const IMAGE_HOST_PATTERNS = /\.(leopedia\.io|hive\.blog|imgur\.com|i\.imgur\.com)\//i
 

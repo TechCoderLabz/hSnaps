@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { isMobilePlatform } from '../utils/platform-detection'
+import { proxyImageUrl } from '../utils/imageProxy'
 import { Search, X, Image } from 'lucide-react'
 
 interface Gif {
@@ -127,13 +128,13 @@ const GiphyPicker: React.FC<GiphyPickerProps> = ({ isOpen, onClose, onSelectGif 
                   className="relative group rounded-lg overflow-hidden hover:ring-2 hover:ring-[#e31337] transition-all"
                 >
                   <img
-                    src={gif.images.fixed_height?.url || gif.images.downsized?.url || gif.images.original?.url}
+                    src={proxyImageUrl(gif.images.fixed_height?.url || gif.images.downsized?.url || gif.images.original?.url || '', 200)}
                     alt={gif.title}
                     className="w-full h-32 object-cover"
                     loading="lazy"
                     onError={(e) => {
                       const t = e.target as HTMLImageElement;
-                      t.src = gif.images.original?.url || gif.images.downsized?.url || "";
+                      t.src = proxyImageUrl(gif.images.original?.url || gif.images.downsized?.url || '');
                     }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

@@ -60,7 +60,7 @@ export function AddCommentInput({
               alt={currentUser}
               className="h-10 w-10 rounded-full border-2 border-zinc-600 object-cover"
               onError={(e) => {
-                ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${currentUser}&background=random`
+                ;(e.target as HTMLImageElement).src = 'https://images.hive.blog/u/null/avatar'
               }}
             />
           ) : (

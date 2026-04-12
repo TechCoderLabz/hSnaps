@@ -2,8 +2,9 @@
  * Fullscreen image preview with left/right swipe and close button.
  * Uses original image URLs (no proxy). Border and rounded corners; arrows only when >1 image.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { proxyImageUrl } from '../utils/imageProxy'
 
 const SWIPE_THRESHOLD_PX = 50
 
@@ -87,9 +88,11 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
     dragSwipeHandled.current = false
   }, [])
 
-  if (imageUrls.length === 0) return null
+  const proxiedUrls = useMemo(() => imageUrls.map((u) => proxyImageUrl(u)), [imageUrls])
 
-  const current = imageUrls[index]!
+  if (proxiedUrls.length === 0) return null
+
+  const current = proxiedUrls[index]!
   const total = imageUrls.length
   const showArrows = total > 1
 

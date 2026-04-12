@@ -13,7 +13,7 @@ import { useAuthData } from '../stores/authStore'
 import { useReportedPostsStore } from '../stores/reportedPostsStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
-import { isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
+import { isIOS, isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
 
 /** Catches render errors from UserDetailProfile so the whole app doesn't crash. */
 class ProfileErrorBoundary extends Component<
@@ -233,12 +233,8 @@ export function UserProfilePage() {
               navigate('/dashboard')
             }
           }}
-          onTip={(author, permlink) => async () => {
+          onTip={isIOS() ? undefined : (author, permlink) => async () => {
             await haAuthStore.switchToPostingForCurrentUser()
-            // if (!isAuthenticated || !aioha?.isLoggedIn()) {
-            //   toast.error('Please login to send a tip')
-            //   return
-            // }
             setTipError(null)
             setTipAmount('')
             setTipToken('HIVE')
@@ -280,8 +276,8 @@ export function UserProfilePage() {
           }}
         />
 
-        {/* Tip dialog */}
-        {showTipDialog && (
+        {/* Tip dialog — hidden on iOS (Apple IAP policy) */}
+        {showTipDialog && !isIOS() && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
             <div className="w-full max-w-md rounded-xl border border-[#3a424a] bg-[#262b30] p-5 shadow-2xl">
               <h3 className="text-lg font-semibold text-white">Send tip</h3>

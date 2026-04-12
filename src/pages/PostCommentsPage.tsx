@@ -13,7 +13,7 @@ import { useAuthData } from '../stores/authStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useReportedPostsStore } from '../stores/reportedPostsStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
-import { isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
+import { isIOS, isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
 
 const REPORT_API_URL = 'https://hreplier-api.sagarkothari88.one/report-post'
 
@@ -189,7 +189,7 @@ export function PostCommentsPage() {
         onNavigateToPost={(a, p) => navigate(`/post/${a}/${p}`)}
         onUserClick={(user) => navigate(`/user/${user}`)}
         onReport={() => { setReportTarget(null); setReportOpen(true) }}
-        onTip={handleOpenTip}
+        onTip={isIOS() ? undefined : handleOpenTip}
         onUpvote={async (percent) => {
           try {
             await vote(resolvedAuthor, resolvedPermlink, percent)
@@ -294,7 +294,7 @@ export function PostCommentsPage() {
             console.log('Share failed')
           }
         }}
-        onTipComment={(cAuthor, _cPermlink) => {
+        onTipComment={isIOS() ? undefined : (cAuthor: string, _cPermlink: string) => {
           if (!isAuthenticated || !aioha?.isLoggedIn()) { toast.error('Please login to send a tip'); return }
           setTipError(null)
           setTipAmount('')
@@ -318,8 +318,8 @@ export function PostCommentsPage() {
         targetPermlink={reportTarget?.permlink ?? resolvedPermlink}
       />
 
-      {/* Tip dialog */}
-      {showTipDialog && (
+      {/* Tip dialog — hidden on iOS (Apple IAP policy) */}
+      {showTipDialog && !isIOS() && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-md rounded-xl border border-[#3a424a] bg-[#262b30] p-5 shadow-2xl">
             <h3 className="text-lg font-semibold text-white">Send tip</h3>

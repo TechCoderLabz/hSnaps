@@ -4,8 +4,15 @@
  */
 import { useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
+import DOMPurify from 'dompurify'
 import { parse3SpeakUrl, htmlEnsure3speakLinks } from '../utils/3speak'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
+
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A') {
+    node.setAttribute('rel', 'noopener noreferrer')
+  }
+})
 
 interface HtmlWith3SpeakProps {
   html: string
@@ -15,7 +22,12 @@ interface HtmlWith3SpeakProps {
 export function HtmlWith3Speak({ html, className = '' }: HtmlWith3SpeakProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mountedRootsRef = useRef<Array<{ root: ReturnType<typeof createRoot> }>>([])
-  const htmlWithLinks = htmlEnsure3speakLinks(html)
+  const htmlWithLinks = DOMPurify.sanitize(htmlEnsure3speakLinks(html), {
+    ADD_TAGS: ['iframe'],
+    ADD_ATTR: ['target', 'allowfullscreen', 'frameborder', 'scrolling', 'allow', 'loading'],
+    FORBID_TAGS: ['script', 'style', 'svg', 'math'],
+    ALLOW_DATA_ATTR: false,
+  })
 
   useEffect(() => {
     const container = containerRef.current

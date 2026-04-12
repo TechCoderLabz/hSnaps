@@ -2,6 +2,50 @@ import React, { useRef, useState } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
 import { useAuthData } from '../stores/authStore'
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const MAGIC_BYTES: Record<string, number[][]> = {
+  'image/jpeg': [[0xFF, 0xD8, 0xFF]],
+  'image/png': [[0x89, 0x50, 0x4E, 0x47]],
+  'image/gif': [[0x47, 0x49, 0x46, 0x38]],
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]],
+}
+
+async function validateMagicBytes(file: File): Promise<boolean> {
+  const buffer = await file.slice(0, 8).arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  const signatures = MAGIC_BYTES[file.type]
+  if (!signatures) return false
+  return signatures.some((sig) => sig.every((b, i) => bytes[i] === b))
+}
+
+function stripMetadataViaCanvas(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0)
+      const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+      const quality = file.type === 'image/png' ? undefined : 0.92
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return }
+          resolve(new File([blob], file.name, { type: mime, lastModified: Date.now() }))
+        },
+        mime,
+        quality
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to process image')) }
+    img.src = url
+  })
+}
+
 interface ImageUploaderProps {
   onImageUploaded: (imageUrl: string) => void;
   disabled?: boolean;
@@ -14,20 +58,30 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, disabled
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { currentUser, ecencyToken: ecencyTokenFromStore } = useAuthData()
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Please select an image file");
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError("Only JPEG, PNG, GIF, and WebP images are allowed");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
       setError("File size must be less than 10MB");
       return;
     }
+    const validBytes = await validateMagicBytes(file);
+    if (!validBytes) {
+      setError("File content doesn't match its type. Please select a valid image.");
+      return;
+    }
     setError(null);
     setPreviewUrl(URL.createObjectURL(file));
-    uploadImage(file);
+    try {
+      const cleaned = file.type === 'image/gif' ? file : await stripMetadataViaCanvas(file);
+      uploadImage(cleaned);
+    } catch {
+      uploadImage(file);
+    }
   };
 
   const uploadImage = async (file: File) => {
@@ -78,7 +132,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, disabled
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
         onChange={handleFileSelect}
         className="hidden"
         disabled={disabled || isUploading}

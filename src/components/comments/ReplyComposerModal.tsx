@@ -68,7 +68,7 @@ export function ReplyComposerModal({
               alt={parentAuthor}
               className="h-10 w-10 rounded-full border border-[#3a424a] object-cover"
               onError={(e) => {
-                ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(parentAuthor)}&background=random`
+                ;(e.target as HTMLImageElement).src = 'https://images.hive.blog/u/null/avatar'
               }}
             />
             <div>

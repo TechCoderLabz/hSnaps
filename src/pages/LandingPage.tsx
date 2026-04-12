@@ -239,7 +239,7 @@ export function LandingPage() {
                 {
                   title: 'Inspired by @peakd\'s Snaps',
                   description: 'Great Dev @asgarth\'s Peakd-Snaps',
-                  avatar: 'https://images.ecency.com/webp/u/asgarth/avatar/medium',
+                  avatar: 'https://images.hive.blog/u/asgarth/avatar',
                   link: 'https://peakd.com/@asgarth',
                   buttonText: 'View',
                 },

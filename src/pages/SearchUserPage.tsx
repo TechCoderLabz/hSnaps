@@ -131,9 +131,7 @@ export function SearchUserPage() {
                 alt={username}
                 className="h-10 w-10 rounded-full object-cover"
                 onError={(e) => {
-                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    username
-                  )}&background=random&color=fff&size=40`
+                  e.currentTarget.src = 'https://images.hive.blog/u/null/avatar'
                 }}
               />
               <div className="min-w-0 flex-1">

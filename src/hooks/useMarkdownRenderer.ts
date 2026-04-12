@@ -4,6 +4,7 @@
  */
 import { useMemo } from 'react'
 import { DefaultRenderer } from '@hiveio/content-renderer'
+import { proxyImageUrl } from '../utils/imageProxy'
 
 const RENDERER_OPTIONS = {
   baseUrl: 'https://hive.blog/',
@@ -14,11 +15,8 @@ const RENDERER_OPTIONS = {
   doNotShowImages: false,
   assetsWidth: 640,
   assetsHeight: 480,
-  // Use Hive image proxy to serve optimized images (600x0 keeps aspect ratio, max width 600px).
-  // Hive proxy expects the FULL original URL as part of the path, e.g.:
-  // https://images.hive.blog/600x0/https://example.com/image.png
   imageProxyFn: (url: string) =>
-    typeof url === 'string' && url.length > 0 ? url : '',
+    typeof url === 'string' && url.length > 0 ? proxyImageUrl(url, 640) : '',
   usertagUrlFn: (account: string) => `/@${account}`,
   hashtagUrlFn: (hashtag: string) => `/trending/${hashtag}`,
   isLinkSafeFn: () => true,
