@@ -25,6 +25,14 @@ function stripLiketuPromo(body: string): string {
     .trim()
 }
 
+/** Remove "via Apps from" suffix appended by some Hive apps. */
+function stripAppPromo(body: string): string {
+  if (!body || typeof body !== 'string') return body
+  return body
+    .replace(/\s*(?:<br\s*\/?>)?\s*<sub>\[via Apps from\]\(https:\/\/linktr\.ee\/sagarkothari88\)<\/sub>\s*$/, '')
+    .trim()
+}
+
 export interface ParsedPostBody {
   plainText: string
   imageUrls: string[]
@@ -176,7 +184,7 @@ function stripStandaloneImageUrlsFromText(text: string, imageUrls: string[]): st
 }
 
 export function parsePostBody(post: NormalizedPost): ParsedPostBody {
-  const body = stripLiketuPromo(post.body ?? '')
+  const body = stripAppPromo(stripLiketuPromo(post.body ?? ''))
   const imageUrlsFromMetaAndMarkdown = getPostImageUrls(post)
   const standaloneImageUrls = extractStandaloneImageUrls(body)
   const seen = new Set(imageUrlsFromMetaAndMarkdown)
