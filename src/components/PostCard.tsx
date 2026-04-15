@@ -22,7 +22,6 @@ import { DELETED_POST_BODY } from '../utils/types'
 import { useAuthData } from '../stores/authStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
 import { useReblogStore } from '../stores/reblogStore'
-import { useReputationStore } from '../stores/reputationStore'
 import { useSnapsStore } from '../stores/snapsStore'
 import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
@@ -88,18 +87,13 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   const isReblogged = useReblogStore((s) => s.isReblogged(post.author, post.permlink))
   const [checkingReblog, setCheckingReblog] = useState(false)
 
-  // Register author for reputation checking
-  const registerAuthor = useReputationStore((s) => s.registerAuthor)
-
   useEffect(() => {
     setDisplayNetVotes(post.net_votes)
   }, [post.net_votes])
 
-  // Register author for reputation checking + set reblog username on mount
   useEffect(() => {
-    registerAuthor(post.author)
     if (username) setReblogUsername(username)
-  }, [post.author, registerAuthor, username, setReblogUsername])
+  }, [username, setReblogUsername])
 
   const hasUserUpvoted = useMemo(() => {
     if (hasLocalUpvote) return true

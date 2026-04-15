@@ -184,7 +184,7 @@ export function UserProfilePage() {
             'activities',
             'followers',
             'following',
-            'wallet',
+            ...(isIOS() ? [] : ['wallet']),
           ]}
           templateToken={token}
           templateApiBaseUrl={import.meta.env.VITE_TEMPLATE_API_BASE_URL || 'https://hreplier-api.sagarkothari88.one/data/templates'}

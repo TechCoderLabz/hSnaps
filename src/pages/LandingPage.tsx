@@ -114,13 +114,14 @@ export function LandingPage() {
             >
               See features
             </a>
-            <button
-              type="button"
-              onClick={() => void openLink('https://ecency.com/signup')}
-              className="rounded-xl border border-[#505863] px-6 py-3 text-base font-medium text-[#e7e7f1] transition hover:border-[#e31337] hover:text-white"
-            >
-              Sign Up
-            </button>
+            {ios && (
+              <Link
+                to="/signup"
+                className="rounded-xl border border-[#505863] px-6 py-3 text-base font-medium text-[#e7e7f1] transition hover:border-[#e31337] hover:text-white"
+              >
+                Sign Up
+              </Link>
+            )}
           </div>
           {isWeb && (
             <div className="mt-6 flex flex-wrap items-center justify-center gap-6">

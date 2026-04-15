@@ -13,6 +13,7 @@ import {
   X,
   Home,
   ShieldCheck,
+  ShieldAlert,
   Info,
   User,
 } from 'lucide-react'
@@ -45,7 +46,7 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
   const navigate = useNavigate()
   const { feedType, setFeedType } = useMobileFeedStore()
   const isNative = isMobilePlatform()
-  const { isAuthenticated, username } = useAuthData()
+  const { isAuthenticated, username, isApprover } = useAuthData()
 
   const handleNav = (path: string) => {
     navigate(path.startsWith('/') ? path : `/dashboard/${path}`)
@@ -186,6 +187,18 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   >
                     <EyeOff className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
                     <span>Ignored</span>
+                  </button>
+                </li>
+              )}
+              {isAuthenticated && isApprover && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleNav('/dashboard/admin')}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  >
+                    <ShieldAlert className="h-5 w-5 shrink-0 text-[#e31337]" />
+                    <span>Admin Moderation</span>
                   </button>
                 </li>
               )}

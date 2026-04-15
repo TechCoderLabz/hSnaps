@@ -9,7 +9,7 @@ import { useSnapsStore } from '../stores/snapsStore'
 import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
 import { useMomentStore } from '../stores/momentStore'
-import { useReputationStore, checkLowReputation } from '../stores/reputationStore'
+import { useBlacklistStore, isBlacklisted } from '../stores/blacklistStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { postMatchesTag } from '../utils/postBody'
 import type { NormalizedPost } from '../utils/types'
@@ -38,7 +38,7 @@ export function TagFeedPage() {
   const threads = useThreadsStore(useShallow(feedSlice))
   const waves = useWavesStore(useShallow(feedSlice))
   const moments = useMomentStore(useShallow(feedSlice))
-  const repCache = useReputationStore((s) => s.cache)
+  const blacklist = useBlacklistStore((s) => s.set)
   const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
   const { isAuthenticated } = useAuthData()
 
@@ -58,7 +58,7 @@ export function TagFeedPage() {
       if (postMatchesTag(p, tagSlug)) combined.push(p)
     }
     const filtered = combined.filter(
-      (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author)
+      (p) => !isBlacklisted(blacklist, p.author) && !isIgnored(p.author)
     )
     filtered.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
     const isLoading = snaps.loading || threads.loading || waves.loading || moments.loading
@@ -73,7 +73,7 @@ export function TagFeedPage() {
     moments.posts,
     moments.loading,
     tagSlug,
-    repCache,
+    blacklist,
     isIgnored,
   ])
 

@@ -16,6 +16,8 @@ import { CSAEStandardsPage } from '../pages/CSAEStandardsPage'
 import { EulaPage } from '../pages/EulaPage'
 import { UserProfilePage } from '../pages/UserProfilePage'
 import { AboutUsPage } from '../pages/AboutUsPage'
+import { SignUpPage } from '../pages/SignUpPage'
+import { AdminModerationPage } from '../pages/AdminModerationPage'
 
 export function AppRoutes() {
   const routes = useRoutes([
@@ -24,6 +26,7 @@ export function AppRoutes() {
     { path: '/csae-standards', element: <CSAEStandardsPage /> },
     { path: '/eula', element: <EulaPage /> },
     { path: '/about-us', element: <AboutUsPage /> },
+    { path: '/signup', element: <SignUpPage /> },
     { path: '/see-all-snaps', element: <Navigate to="/dashboard" replace /> },
     { path: '/tags/:tag', element: <TagFeedPage /> },
     { path: '/post/:author/:permlink', element: <PostCommentsPage /> },
@@ -37,6 +40,7 @@ export function AppRoutes() {
         { path: 'search-user', element: <SearchUserPage /> },
         { path: 'ignored', element: <IgnoredPage /> },
         { path: 'settings', element: <SettingsPage /> },
+        { path: 'admin', element: <AdminModerationPage /> },
         { path: 'snaps', element: <Navigate to="/dashboard" replace /> },
         { path: 'threads', element: <Navigate to="/dashboard" replace /> },
         { path: 'waves', element: <Navigate to="/dashboard" replace /> },

@@ -10,6 +10,7 @@ import { useFollowingStore } from '../stores/followingStore'
 const FILTER_LABELS: Record<FeedFilterMode, string> = {
   newest: 'Newest',
   trending: 'Trending',
+  hsnaps: '#hSnaps only',
   following: 'Following Feeds',
   my_feed: 'My feed',
 }
@@ -22,8 +23,8 @@ export function FeedFilterDropdown() {
   const fetchFollowings = useFollowingStore((s) => s.fetchFollowings)
 
   const options: FeedFilterMode[] = isAuthenticated
-    ? ['newest', 'trending', 'following', 'my_feed']
-    : ['newest', 'trending']
+    ? ['newest', 'trending', 'hsnaps', 'following', 'my_feed']
+    : ['newest', 'trending', 'hsnaps']
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
