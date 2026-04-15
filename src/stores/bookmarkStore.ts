@@ -11,6 +11,8 @@ interface BookmarkState {
   bookmarkedKeys: Set<string>
   /** Whether the initial fetch has completed */
   loaded: boolean
+  /** In-flight fetch promise (dedupes concurrent callers) */
+  inflight: Promise<void> | null
   /** Fetch all bookmarks for the current user */
   fetchBookmarks: (token: string) => Promise<void>
   /** Add a bookmark and update local state */
@@ -28,15 +30,25 @@ const makeKey = (author: string, permlink: string) => `${author}/${permlink}`
 export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   bookmarkedKeys: new Set(),
   loaded: false,
+  inflight: null,
 
-  fetchBookmarks: async (token: string) => {
-    try {
-      const items = await getBookmarks(token)
-      const keys = new Set(items.map((i) => makeKey(i.author, i.permlink)))
-      set({ bookmarkedKeys: keys, loaded: true })
-    } catch {
-      set({ loaded: true })
-    }
+  fetchBookmarks: (token: string) => {
+    const existing = get().inflight
+    if (existing) return existing
+    if (get().loaded) return Promise.resolve()
+    const promise = (async () => {
+      try {
+        const items = await getBookmarks(token)
+        const keys = new Set(items.map((i) => makeKey(i.author, i.permlink)))
+        set({ bookmarkedKeys: keys, loaded: true })
+      } catch {
+        set({ loaded: true })
+      } finally {
+        set({ inflight: null })
+      }
+    })()
+    set({ inflight: promise })
+    return promise
   },
 
   add: async (token, author, permlink, title, body) => {
@@ -61,5 +73,5 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     return get().bookmarkedKeys.has(makeKey(author, permlink))
   },
 
-  clear: () => set({ bookmarkedKeys: new Set(), loaded: false }),
+  clear: () => set({ bookmarkedKeys: new Set(), loaded: false, inflight: null }),
 }))

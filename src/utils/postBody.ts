@@ -5,6 +5,7 @@
 import type { NormalizedPost } from './types'
 import { getPostImageUrls } from './postImages'
 import { parse3SpeakUrl } from './3speak'
+import { stripAppSuffix } from '../hooks/useHiveOperations'
 
 const TWITTER_STATUS_REGEX =
   /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^/]+\/status\/(\d+)/gi
@@ -176,7 +177,7 @@ function stripStandaloneImageUrlsFromText(text: string, imageUrls: string[]): st
 }
 
 export function parsePostBody(post: NormalizedPost): ParsedPostBody {
-  const body = stripLiketuPromo(post.body ?? '')
+  const body = stripLiketuPromo(stripAppSuffix(post.body ?? ''))
   const imageUrlsFromMetaAndMarkdown = getPostImageUrls(post)
   const standaloneImageUrls = extractStandaloneImageUrls(body)
   const seen = new Set(imageUrlsFromMetaAndMarkdown)

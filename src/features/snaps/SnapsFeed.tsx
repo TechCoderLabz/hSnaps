@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import Masonry from 'react-masonry-css'
 import { useSnapsStore } from '../../stores/snapsStore'
 import { useAuthData } from '../../stores/authStore'
-import { useReputationStore, checkLowReputation } from '../../stores/reputationStore'
+import { useBlacklistStore, isBlacklisted } from '../../stores/blacklistStore'
 import { useIgnoredAuthorsStore } from '../../stores/ignoredAuthorsStore'
 import { DELETED_POST_BODY } from '../../utils/types'
 import { useViewStore } from '../../stores/viewStore'
@@ -23,7 +23,7 @@ const MASONRY_BP = { default: 5, 1919: 4, 1279: 3, 1023: 2, 639: 1 }
 export function SnapsFeed() {
   const { isAuthenticated } = useAuthData()
   const { posts, loading, error, hasMore, fetchFeed, loadMore } = useSnapsStore()
-  const repCache = useReputationStore((s) => s.cache)
+  const blacklist = useBlacklistStore((s) => s.set)
   const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
   const viewMode = useViewStore((s) => s.viewMode)
   const isDesktop = useIsDesktop()
@@ -36,7 +36,7 @@ export function SnapsFeed() {
   }, [fetchFeed])
 
   const filteredPosts = posts.filter(
-    (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author) && p.body !== DELETED_POST_BODY
+    (p) => !isBlacklisted(blacklist, p.author) && !isIgnored(p.author) && p.body !== DELETED_POST_BODY
   )
 
   const renderItems = (items: React.ReactNode) =>

@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import Masonry from 'react-masonry-css'
 import { useMomentStore } from '../../stores/momentStore'
 import { useAuthData } from '../../stores/authStore'
-import { useReputationStore, checkLowReputation } from '../../stores/reputationStore'
+import { useBlacklistStore, isBlacklisted } from '../../stores/blacklistStore'
 import { useIgnoredAuthorsStore } from '../../stores/ignoredAuthorsStore'
 import { useViewStore } from '../../stores/viewStore'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
@@ -18,7 +18,7 @@ const MASONRY_BP = { default: 5, 1919: 4, 1279: 3, 1023: 2, 639: 1 }
 export function MomentFeed() {
   const { isAuthenticated } = useAuthData()
   const { posts, loading, error, hasMore, fetchFeed, loadMore } = useMomentStore()
-  const repCache = useReputationStore((s) => s.cache)
+  const blacklist = useBlacklistStore((s) => s.set)
   const viewMode = useViewStore((s) => s.viewMode)
   const isDesktop = useIsDesktop()
   const useGrid = isDesktop && viewMode === 'grid'
@@ -31,7 +31,7 @@ export function MomentFeed() {
 
   const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
   const filteredPosts = posts.filter(
-    (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author)
+    (p) => !isBlacklisted(blacklist, p.author) && !isIgnored(p.author)
   )
 
   const renderItems = (items: React.ReactNode) =>

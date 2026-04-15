@@ -4,7 +4,7 @@ import { useSnapsStore } from '../stores/snapsStore'
 import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
 import { useMomentStore } from '../stores/momentStore'
-import { useReputationStore, checkLowReputation } from '../stores/reputationStore'
+import { useBlacklistStore, isBlacklisted } from '../stores/blacklistStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { useFollowingStore } from '../stores/followingStore'
@@ -50,14 +50,14 @@ export function useFeedByType(feedType: UnifiedFeedType) {
           ? waves
           : moments
 
-  const repCache = useReputationStore((s) => s.cache)
+  const blacklist = useBlacklistStore((s) => s.set)
   const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
   const feedFilter = useFeedFilterStore((s) => s.feedFilter)
   const isFollowing = useFollowingStore((s) => s.isFollowing)
   const username = useAuthData().username ?? ''
 
   let filteredPosts = state.posts.filter(
-    (p) => !checkLowReputation(repCache, p.author) && !isIgnored(p.author)
+    (p) => !isBlacklisted(blacklist, p.author) && !isIgnored(p.author)
   )
 
   switch (feedFilter) {
@@ -65,6 +65,15 @@ export function useFeedByType(feedType: UnifiedFeedType) {
       filteredPosts = [...filteredPosts].sort(
         (a, b) => (b.children ?? 0) - (a.children ?? 0) || new Date(b.created).getTime() - new Date(a.created).getTime()
       )
+      break
+    case 'hsnaps':
+      filteredPosts = filteredPosts.filter((p) => {
+        if (!p.json_metadata) return false
+        try {
+          const meta = JSON.parse(p.json_metadata) as { tags?: string[] }
+          return Array.isArray(meta.tags) && meta.tags.some((t) => String(t).toLowerCase() === 'hsnaps')
+        } catch { return false }
+      })
       break
     case 'following':
       filteredPosts = filteredPosts.filter((p) => isFollowing(p.author))

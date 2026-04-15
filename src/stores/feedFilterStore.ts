@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand'
 
-export type FeedFilterMode = 'newest' | 'trending' | 'following' | 'my_feed'
+export type FeedFilterMode = 'newest' | 'trending' | 'hsnaps' | 'following' | 'my_feed'
 
 interface FeedFilterState {
   feedFilter: FeedFilterMode
