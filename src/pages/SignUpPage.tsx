@@ -26,12 +26,12 @@ import { toast } from 'sonner'
 import { checkUsername, createAccount } from '../services/accountService'
 import type { CreateAccountResult } from '../services/accountService'
 
-/** Generate a strong random password (P5 + 48 random base58 chars). */
+/** Generate a strong random master password: 32 random base58 chars (matches peakd format). */
 function generatePassword(): string {
   const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-  const bytes = new Uint8Array(48)
+  const bytes = new Uint8Array(32)
   crypto.getRandomValues(bytes)
-  let pw = 'P5'
+  let pw = ''
   for (const b of bytes) pw += BASE58[b % BASE58.length]
   return pw
 }

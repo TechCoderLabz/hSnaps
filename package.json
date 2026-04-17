@@ -9,6 +9,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite",
     "build": "vite build",
     "android": "npm i && npm run build && npx cap sync && npx cap run android",
     "ios": "npm i && npm run build && npx cap sync && npx cap run ios",
