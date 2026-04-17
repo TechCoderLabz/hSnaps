@@ -1,6 +1,6 @@
 /**
- * Same pop-up as "Create new post" but for replying: shows FeedComposer
- * with parent author name & profile image. Used for "Add comment" and "Reply".
+ * Pop-up that wraps FeedComposer in reply mode. Shows the parent author's
+ * avatar, username, and permlink in the header (no current-user info).
  */
 import { useEffect, useState } from 'react'
 import { FeedComposer } from '../FeedComposer'
@@ -60,26 +60,27 @@ export function ReplyComposerModal({
       />
 
       <div className="relative z-10 w-full max-w-2xl animate-[slideUp_200ms_ease-out] sm:animate-[scaleIn_200ms_ease-out] rounded-2xl border border-[#3a424a] bg-[#262b30] overflow-hidden">
-        {/* Header: same style as Create new post, with parent author + avatar */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#262b30]">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#262b30]">
+          <div className="flex min-w-0 items-center gap-3">
             <img
               src={avatarUrl}
               alt={parentAuthor}
-              className="h-10 w-10 rounded-full border border-[#3a424a] object-cover"
+              className="h-10 w-10 shrink-0 rounded-full border border-[#3a424a] object-cover"
               onError={(e) => {
                 ;(e.target as HTMLImageElement).src = 'https://images.hive.blog/u/null/avatar'
               }}
             />
-            <div>
-              <h2 className="text-base font-semibold text-[#f0f0f8]">Reply to @{parentAuthor}</h2>
-              <p className="text-xs text-[#9ca3b0]">Comment</p>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold text-[#f0f0f8]">@{parentAuthor}</h2>
+              <p className="truncate text-xs text-[#9ca3b0]" title={parentPermlink}>
+                replying to {parentAuthor}/{parentPermlink}
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8] focus:outline-none focus:ring-2 focus:ring-[#e31337]/40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8] focus:outline-none focus:ring-2 focus:ring-[#e31337]/40"
             aria-label="Close"
           >
             <svg
@@ -96,7 +97,7 @@ export function ReplyComposerModal({
           </button>
         </div>
 
-        <div className="bg-[#262b30] p-4">
+        <div className="bg-[#262b30] px-4 pb-4">
           <FeedComposer
             feedType={feedType}
             parentAuthor={parentAuthor}

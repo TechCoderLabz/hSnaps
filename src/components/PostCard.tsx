@@ -14,6 +14,7 @@ import { FeedItemOptions } from './FeedItemOptions'
 import { FeedItemBody } from './FeedItemBody'
 import { EditPostModal } from './EditPostModal'
 import { VoteSlider } from './comments/VoteSlider'
+import { ReplyComposerModal } from './comments/ReplyComposerModal'
 import { PollView, parsePollFromMetadata } from './PollView'
 import { contentHas3SpeakEmbed } from '../utils/3speak'
 import { getDiscussion } from '../services/hiveService'
@@ -79,6 +80,12 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+  const [showReplyComposer, setShowReplyComposer] = useState(false)
+  const [displayChildren, setDisplayChildren] = useState(post.children)
+
+  useEffect(() => {
+    setDisplayChildren(post.children)
+  }, [post.children])
 
   // Reblog store: on-demand checking
   const checkReblog = useReblogStore((s) => s.checkReblog)
@@ -451,15 +458,24 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={handleCommentRoute}
-          className={actionBtnClass}
-          aria-label="Open comments"
-        >
-          <MessageCircle className="h-4 w-4" />
-          <span className="text-xs">{post.children}</span>
-        </button>
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setShowReplyComposer(true)}
+            className={actionBtnClass}
+            aria-label="Reply to post"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleCommentRoute}
+            className="rounded-lg px-1.5 py-1.5 text-xs font-medium text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8]"
+            aria-label="Open comments"
+          >
+            {displayChildren}
+          </button>
+        </div>
 
         <button
           type="button"
@@ -624,6 +640,17 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
             </div>
           </div>
         </div>
+      )}
+      {showReplyComposer && (
+        <ReplyComposerModal
+          isOpen={showReplyComposer}
+          onClose={() => setShowReplyComposer(false)}
+          onSuccess={() => {
+            setDisplayChildren((prev) => prev + 1)
+          }}
+          parentAuthor={post.author}
+          parentPermlink={post.permlink}
+        />
       )}
       {showEditModal && (
         <EditPostModal

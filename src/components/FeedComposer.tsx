@@ -215,9 +215,10 @@ export function FeedComposer({
         submitLabel={isSubmitting ? 'Posting…' : 'Post'}
         showCancel={false}
         hideUserHeader
+        parentPermlink={parentPermlink}
         bgColor="#262b30"
         borderColor="#3a424a"
-        // ecencyToken={ecencyToken}
+        ecencyToken={ecencyToken}
         onSignMessage={signMessage}
         signingUsername={username || undefined}
         awaitingWalletApproval={awaitingWalletApproval}
