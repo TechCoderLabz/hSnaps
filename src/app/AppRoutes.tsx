@@ -2,6 +2,7 @@
  * App routes: Landing, Login, Dashboard (with feed tabs), Bookmarks, Search User, Ignored, Settings.
  */
 import { Navigate, useRoutes } from 'react-router-dom'
+import { useSystemBackButton } from '../hooks/useSystemBackButton'
 import { LandingPage } from '../pages/LandingPage'
 import { DashboardLayout } from '../layouts/DashboardLayout'
 import { UnifiedFeedPage } from '../features/feed/UnifiedFeedPage'
@@ -20,6 +21,7 @@ import { SignUpPage } from '../pages/SignUpPage'
 import { AdminModerationPage } from '../pages/AdminModerationPage'
 
 export function AppRoutes() {
+  useSystemBackButton()
   const routes = useRoutes([
     { path: '/', element: <LandingPage /> },
     { path: '/privacy', element: <PrivacyPage /> },
