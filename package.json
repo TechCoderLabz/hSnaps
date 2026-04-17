@@ -26,7 +26,7 @@
     "@mantequilla-soft/3speak-player": "^0.3.2",
     "@tailwindcss/vite": "^4.2.1",
     "hive-authentication": "^0.6.2",
-    "hive-react-kit": "^0.8.4",
+    "hive-react-kit": "^0.8.7",
     "lucide-react": "^0.576.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

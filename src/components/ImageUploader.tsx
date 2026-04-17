@@ -1,6 +1,8 @@
 import React, { useRef, useState } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
+import { useAioha } from '@aioha/react-provider'
 import { useAuthData } from '../stores/authStore'
+import { uploadToHiveImages } from '../services/hiveImageUpload'
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAGIC_BYTES: Record<string, number[][]> = {
@@ -56,7 +58,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, disabled
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const { currentUser, ecencyToken: ecencyTokenFromStore } = useAuthData()
+  const { currentUser, ecencyToken: ecencyTokenFromStore, username } = useAuthData()
+  const { aioha } = useAioha()
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -84,36 +87,50 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, disabled
     }
   };
 
+  const uploadToEcency = async (file: File): Promise<string> => {
+    const ecencyToken =
+      ecencyTokenFromStore ||
+      (currentUser?.serverResponse ? (JSON.parse(currentUser.serverResponse) as { ecencyToken?: string })?.ecencyToken : undefined);
+    if (!ecencyToken) {
+      throw new Error("Please log in to upload images. Upload token not found.");
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch("https://images.ecency.com/hs/" + ecencyToken, {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/plain, */*",
+        origin: "https://ecency.com",
+        referer: "https://ecency.com/",
+      },
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
+    const data = await response.json();
+    if (!data.url) throw new Error("No URL returned from upload");
+    return data.url as string;
+  };
+
   const uploadImage = async (file: File) => {
     setIsUploading(true);
     setError(null);
     try {
-      const ecencyToken =
-        ecencyTokenFromStore ||
-        (currentUser?.serverResponse ? (JSON.parse(currentUser.serverResponse) as { ecencyToken?: string })?.ecencyToken : undefined);
-      if (!ecencyToken) {
-        throw new Error("Please log in to upload images. Upload token not found.");
+      let url: string;
+      try {
+        url = await uploadToEcency(file);
+      } catch (ecencyErr) {
+        if (!aioha || !username) throw ecencyErr;
+        try {
+          url = await uploadToHiveImages(aioha, username, file);
+        } catch (hiveErr) {
+          const ecencyMsg = ecencyErr instanceof Error ? ecencyErr.message : String(ecencyErr);
+          const hiveMsg = hiveErr instanceof Error ? hiveErr.message : String(hiveErr);
+          throw new Error(`Both upload methods failed. Ecency: ${ecencyMsg}. Hive: ${hiveMsg}`);
+        }
       }
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("https://images.ecency.com/hs/" + ecencyToken, {
-        method: "POST",
-        headers: {
-          accept: "application/json, text/plain, */*",
-          origin: "https://ecency.com",
-          referer: "https://ecency.com/",
-        },
-        body: formData,
-      });
-      if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
-      const data = await response.json();
-      if (data.url) {
-        onImageUploaded(data.url);
-        setPreviewUrl(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      } else {
-        throw new Error("No URL returned from upload");
-      }
+      onImageUploaded(url);
+      setPreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload image");
     } finally {

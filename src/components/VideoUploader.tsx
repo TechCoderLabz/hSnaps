@@ -1,7 +1,10 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Video, X, Loader2, Play, Trash2 } from 'lucide-react'
 import { Upload as TusUpload } from 'tus-js-client'
+import { useAioha } from '@aioha/react-provider'
+import type { Aioha } from '@aioha/aioha'
 import { useAuthData } from '../stores/authStore'
+import { uploadToHiveImages } from '../services/hiveImageUpload'
 
 interface VideoUploaderProps {
   onVideoUploaded: (videoEmbedUrl: string, uploadUrl: string, aspectRatio: string, localPreviewFile?: File) => void
@@ -146,6 +149,27 @@ async function uploadThumbnailToEcency(blob: Blob, ecencyToken: string): Promise
   return data.url
 }
 
+/** Upload thumbnail with Ecency primary, Hive as failure safeguard. */
+async function uploadThumbnail(
+  blob: Blob,
+  ecencyToken: string,
+  aioha: Aioha | null | undefined,
+  username: string | null | undefined,
+): Promise<string> {
+  try {
+    return await uploadThumbnailToEcency(blob, ecencyToken)
+  } catch (ecencyErr) {
+    if (!aioha || !username) throw ecencyErr
+    try {
+      return await uploadToHiveImages(aioha, username, blob, `video-thumbnail-${Date.now()}.jpg`)
+    } catch (hiveErr) {
+      const ecencyMsg = ecencyErr instanceof Error ? ecencyErr.message : String(ecencyErr)
+      const hiveMsg = hiveErr instanceof Error ? hiveErr.message : String(hiveErr)
+      throw new Error(`Both upload methods failed. Ecency: ${ecencyMsg}. Hive: ${hiveMsg}`)
+    }
+  }
+}
+
 /** Set thumbnail on 3Speak for a given video permlink. */
 async function setThumbnailOn3Speak(permlink: string, thumbnailUrl: string): Promise<void> {
   const response = await fetch(`https://embed.3speak.tv/video/${permlink}/thumbnail`, {
@@ -258,6 +282,7 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onVideoUploaded, disabled
   const [error, setError] = useState<string | null>(null)
 
   const { username, currentUser, ecencyToken: ecencyTokenFromStore } = useAuthData()
+  const { aioha } = useAioha()
 
   // Cleanup on unmount
   useEffect(() => {
@@ -350,7 +375,7 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onVideoUploaded, disabled
             ? (JSON.parse(currentUser.serverResponse) as { ecencyToken?: string })?.ecencyToken
             : undefined)
         if (ecencyToken) {
-          thumbnailUrlPromise = uploadThumbnailToEcency(thumbnailBlob, ecencyToken).catch((err) => {
+          thumbnailUrlPromise = uploadThumbnail(thumbnailBlob, ecencyToken, aioha, username).catch((err) => {
             console.warn('Thumbnail upload failed:', err)
             return null
           })

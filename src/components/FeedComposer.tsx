@@ -5,8 +5,10 @@
  */
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { PostComposer } from 'hive-react-kit'
+import { PostComposer, useHiveImageSign } from 'hive-react-kit'
 import type { PollData } from 'hive-react-kit'
+import { useAioha } from '@aioha/react-provider'
+import { useAuthStore as useHiveAuthStore } from 'hive-authentication'
 import { useAuthData } from '../stores/authStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
 import type { FeedType } from '../utils/types'
@@ -124,10 +126,16 @@ export function FeedComposer({
   replyMode = false,
 }: FeedComposerProps) {
   const { isAuthenticated, username, ecencyToken, token } = useAuthData()
+  const { aioha } = useAioha()
   const { comment } = useHiveOperations()
+  const { currentUser: hiveAuthUser } = useHiveAuthStore()
+  const signMessage = useHiveImageSign({ signer: aioha, user: hiveAuthUser })
   const [body, setBody] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pollData, setPollData] = useState<PollData | null>(null)
+  const provider = (hiveAuthUser?.provider || '').toLowerCase()
+  const isWalletProvider = provider === 'keychain' || provider === 'peakvault' || provider === 'hiveauth'
+  const awaitingWalletApproval = isSubmitting && isWalletProvider
 
   const giphyApiKey = import.meta.env.VITE_GIPHY_KEY || undefined
   const threeSpeakApiKey = import.meta.env.VITE_3SPEAK_API_KEY || undefined
@@ -209,7 +217,10 @@ export function FeedComposer({
         hideUserHeader
         bgColor="#262b30"
         borderColor="#3a424a"
-        ecencyToken={ecencyToken}
+        // ecencyToken={ecencyToken}
+        onSignMessage={signMessage}
+        signingUsername={username || undefined}
+        awaitingWalletApproval={awaitingWalletApproval}
         threeSpeakApiKey={threeSpeakApiKey}
         giphyApiKey={giphyApiKey}
         templateApiBaseUrl={import.meta.env.VITE_TEMPLATE_API_BASE_URL || 'https://hreplier-api.sagarkothari88.one/data/templates'}
