@@ -460,7 +460,9 @@ export function SignUpPage() {
                   <KeyRound className="h-4 w-4 shrink-0 text-[#9ca3b0]" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-[#9ca3b0]">{label}</p>
-                    <p className="truncate font-mono text-xs text-[#e7e7f1]">{value}</p>
+                    <p className="truncate font-mono text-xs tracking-widest text-[#e7e7f1]">
+                      {'•'.repeat(12)}
+                    </p>
                   </div>
                   <button
                     type="button"

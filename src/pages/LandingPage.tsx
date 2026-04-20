@@ -114,7 +114,7 @@ export function LandingPage() {
             >
               See features
             </a>
-            {(ios || isWeb) && (
+            {ios && (
               <Link
                 to="/signup"
                 className="rounded-xl border border-[#505863] px-6 py-3 text-base font-medium text-[#e7e7f1] transition hover:border-[#e31337] hover:text-white"
