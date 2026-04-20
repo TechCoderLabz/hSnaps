@@ -30,7 +30,8 @@ export function DashboardLayout() {
   const hideFeedFilter =
     location.pathname.startsWith('/dashboard/settings') ||
     location.pathname.startsWith('/dashboard/search-user') ||
-    location.pathname.startsWith('/post/')
+    location.pathname.startsWith('/post/') ||
+    location.pathname.startsWith('/@')
 
   useEffect(() => {
     if (token) {

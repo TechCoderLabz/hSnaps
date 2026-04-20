@@ -73,7 +73,7 @@ export function SearchUserPage() {
     } catch {
       // ignore
     }
-    navigate(`/user/${username}`)
+    navigate(`/@${username}`)
   }
 
   const renderSearchState = () => {

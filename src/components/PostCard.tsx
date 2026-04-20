@@ -239,7 +239,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleShare = async () => {
-    const postUrl = `${getShareBaseUrl()}/#/post/${post.author}/${post.permlink}`
+    const postUrl = `${getShareBaseUrl()}/#/@${post.author}/${post.permlink}`
     try {
       if (!isMobilePlatform() && navigator.share) {
         await navigator.share({ url: postUrl, title: `Post by @${post.author}` })
@@ -308,11 +308,11 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   }
 
   const handleCommentRoute = () => {
-    navigate(`/post/${post.author}/${post.permlink}`, { state: { post } })
+    navigate(`/@${post.author}/${post.permlink}`, { state: { post } })
   }
 
   const handleAuthorRoute = () => {
-    navigate(`/user/${post.author}`)
+    navigate(`/@${post.author}`)
   }
 
   /** Remove a post locally from all feed stores. */

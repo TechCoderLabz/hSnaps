@@ -4,12 +4,13 @@
  * lightweight placeholders; tapping opens a popup that loads the actual embed on demand.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Play, X, ChevronLeft, ChevronRight, Music } from 'lucide-react'
 import type { NormalizedPost } from '../utils/types'
 import type { ParsedPostBody } from '../utils/postBody'
 import { parsePostBody, plainTextToSegments } from '../utils/postBody'
 import { openLink } from '../utils/openLink'
+import { parseHiveFrontendUrl } from 'hive-react-kit'
 import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
 import { getHiveProxyThumbnailUrl, proxyImageUrl } from '../utils/imageProxy'
@@ -21,12 +22,22 @@ import { isMobilePlatform } from '../utils/platform-detection'
 /* ------------------------------------------------------------------ */
 
 function LinkSegment({ url }: { url: string }) {
+  const navigate = useNavigate()
+  const hiveTarget = useMemo(() => parseHiveFrontendUrl(url), [url])
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
+      if (hiveTarget?.kind === 'post') {
+        navigate(`/@${hiveTarget.author}/${hiveTarget.permlink}`)
+        return
+      }
+      if (hiveTarget?.kind === 'user') {
+        navigate(`/@${hiveTarget.author}`)
+        return
+      }
       void openLink(url)
     },
-    [url]
+    [hiveTarget, navigate, url]
   )
   return (
     <a
@@ -55,7 +66,7 @@ function HashtagSegment({ tag }: { tag: string }) {
 function MentionSegment({ username }: { username: string }) {
   return (
     <Link
-      to={`/user/${username}`}
+      to={`/@${username}`}
       className="text-[#e31337] underline hover:text-[#c51231]"
     >
       @{username}

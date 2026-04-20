@@ -33,6 +33,11 @@ export function AppRoutes() {
     { path: '/tags/:tag', element: <TagFeedPage /> },
     { path: '/post/:author/:permlink', element: <PostCommentsPage /> },
     { path: '/user/:username', element: <UserProfilePage /> },
+    // React Router v6+ only parses `:param` when preceded by `/`, so the `@` must
+    // live inside the param value. These pages strip a leading `@` before use,
+    // allowing URLs like `/@alice/slug` and `/@alice` to resolve correctly.
+    { path: '/:author/:permlink', element: <PostCommentsPage /> },
+    { path: '/:username', element: <UserProfilePage /> },
     {
       path: '/dashboard',
       element: <DashboardLayout />,

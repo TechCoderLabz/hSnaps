@@ -242,25 +242,25 @@ export function UserProfilePage() {
             setShowTipDialog(true)
           }}
           onCommentClick={(author, permlink) => {
-            navigate(`/post/${author}/${permlink}`)
+            navigate(`/@${author}/${permlink}`)
           }}
           onPostClick={(author, permlink) => {
-            navigate(`/post/${author}/${permlink}`)
+            navigate(`/@${author}/${permlink}`)
           }}
           onSnapClick={(author, permlink) => {
-            navigate(`/post/${author}/${permlink}`)
+            navigate(`/@${author}/${permlink}`)
           }}
           onPollClick={(author, permlink) => {
-            navigate(`/post/${author}/${permlink}`)
+            navigate(`/@${author}/${permlink}`)
           }}
           onUserClick={(user) => {
-            navigate(`/user/${user}`)
+            navigate(`/@${user}`)
           }}
           onActivityPermlink={(author, permlink) => {
-            navigate(`/post/${author}/${permlink}`)
+            navigate(`/@${author}/${permlink}`)
           }}
           onShare={async () => {
-            const url = `${getShareBaseUrl()}/#/user/${profileUsername}`
+            const url = `${getShareBaseUrl()}/#/@${profileUsername}`
             try {
               if (!isMobilePlatform() && navigator.share) {
                 await navigator.share({ url, title: `Profile of @${profileUsername}` })

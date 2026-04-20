@@ -119,7 +119,7 @@ export function BookmarksPage() {
               className="h-10 w-10 shrink-0 rounded-full border border-[#505863] object-cover"
             />
             <Link
-              to={`/post/${b.author}/${b.permlink}`}
+              to={`/@${b.author}/${b.permlink}`}
               className="min-w-0 flex-1"
             >
               <p className="text-sm font-medium text-[#ff8fa3]">@{b.author}</p>

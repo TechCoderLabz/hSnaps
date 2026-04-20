@@ -158,7 +158,7 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 <li>
                   <button
                     type="button"
-                    onClick={() => handleNav(`/user/${username}`)}
+                    onClick={() => handleNav(`/@${username}`)}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
                   >
                     <User className="h-5 w-5 shrink-0 text-[#9ca3b0]" />

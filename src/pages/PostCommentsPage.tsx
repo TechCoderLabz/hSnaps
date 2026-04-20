@@ -52,7 +52,7 @@ export function PostCommentsPage() {
   const [tipSubmitting, setTipSubmitting] = useState(false)
   const [tipError, setTipError] = useState<string | null>(null)
 
-  const resolvedAuthor = author ?? ''
+  const resolvedAuthor = (author ?? '').replace(/^@/, '')
   const resolvedPermlink = permlink ?? ''
 
   if (!resolvedAuthor || !resolvedPermlink) {
@@ -186,8 +186,8 @@ export function PostCommentsPage() {
         reportedAuthors={ignoredAuthors}
         reportedPosts={reportedPostsStore.reportedPosts}
         onBack={() => navigate(-1)}
-        onNavigateToPost={(a, p) => navigate(`/post/${a}/${p}`)}
-        onUserClick={(user) => navigate(`/user/${user}`)}
+        onNavigateToPost={(a, p) => navigate(`/@${a}/${p}`)}
+        onUserClick={(user) => navigate(`/@${user}`)}
         onReport={() => { setReportTarget(null); setReportOpen(true) }}
         onTip={isIOS() ? undefined : handleOpenTip}
         onUpvote={async (percent) => {
@@ -243,7 +243,7 @@ export function PostCommentsPage() {
           }
         }}
         onShare={async () => {
-          const url = `${getShareBaseUrl()}/#/post/${resolvedAuthor}/${resolvedPermlink}`
+          const url = `${getShareBaseUrl()}/#/@${resolvedAuthor}/${resolvedPermlink}`
           try {
             if (!isMobilePlatform() && navigator.share) {
               await navigator.share({ url, title: `Post by @${resolvedAuthor}` })
@@ -280,7 +280,7 @@ export function PostCommentsPage() {
           }
         }}
         onShareComment={async (cAuthor, cPermlink) => {
-          const url = `${getShareBaseUrl()}/#/post/${cAuthor}/${cPermlink}`
+          const url = `${getShareBaseUrl()}/#/@${cAuthor}/${cPermlink}`
           try {
             if (!isMobilePlatform() && navigator.share) {
               await navigator.share({ url, title: `Comment by @${cAuthor}` })
