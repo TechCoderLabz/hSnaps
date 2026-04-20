@@ -3,10 +3,10 @@
  * Hive-specific business logic (feed metadata, blockchain posting, polls, char limits).
  * Renders nothing when user is not logged in.
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PostComposer, useHiveImageSign } from 'hive-react-kit'
-import type { PollData } from 'hive-react-kit'
+import type { PollData, RewardOption } from 'hive-react-kit'
 import { useAioha } from '@aioha/react-provider'
 import { useAuthStore as useHiveAuthStore } from 'hive-authentication'
 import { useAuthData } from '../stores/authStore'
@@ -38,19 +38,39 @@ function extractImageUrlsFromMarkdown(md: string): string[] {
 }
 
 const DEVELOPER = 'sagarkothari88'
-const DEFAULT_TAGS = ['hsnaps']
+const APP_TAG = 'hsnaps'
 
-/** Build app-specific json_metadata for each feed type. */
+/**
+ * Locked default tags per feed type — shown in the composer's tag manager.
+ *
+ * - `hsnaps` is always the first tag (app identifier).
+ * - New posts include the feed-specific tags after the app tag.
+ * - Replies keep the list minimal (just `hsnaps`) — no per-feed tags or inheritance
+ *   from the parent post, since the reply lives inside the parent's tagged container.
+ */
+function getDefaultTagsForFeed(feedType: FeedType, replyMode: boolean): string[] {
+  if (replyMode) return [APP_TAG]
+  const now = new Date()
+  const wavesTag = `waves-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+  switch (feedType) {
+    case 'snaps':   return [APP_TAG, 'hive-178315', 'snaps']
+    case 'waves':   return [APP_TAG, wavesTag]
+    case 'threads': return [APP_TAG, 'leofinance']
+    case 'moments': return [APP_TAG, 'moments']
+    default:        return [APP_TAG, 'hive-178315', 'snaps']
+  }
+}
+
+/** Build app-specific json_metadata for each feed type, using caller-supplied tags. */
 function buildJsonMetadataForFeed(
   feedType: FeedType,
   body: string,
+  tags: string[],
   audioInfo?: { url: string; duration: number } | null,
   videoInfo?: { url: string; uploadUrl: string; aspectRatio?: string } | null,
   pollData?: PollData | null,
 ): string {
   const images = extractImageUrlsFromMarkdown(body)
-  const now = new Date()
-  const wavesTag = `waves-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
   const audioMeta = audioInfo
     ? { audio: { platform: '3speak', url: audioInfo.url, duration: audioInfo.duration } }
     : {}
@@ -76,14 +96,14 @@ function buildJsonMetadataForFeed(
     case 'snaps':
       return JSON.stringify({
         app: 'peakd/2026.3.1', developer: DEVELOPER,
-        tags: ['hive-178315', 'snaps', ...DEFAULT_TAGS],
+        tags,
         ...(images.length > 0 && { image: images }),
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
     case 'waves':
       return JSON.stringify({
         app: 'ecency/3.5.1-mobile', developer: DEVELOPER,
-        tags: [wavesTag, ...DEFAULT_TAGS], type: 'wave',
+        tags, type: 'wave',
         ...(images.length > 0 && { image: images }),
         ...(images.length > 0 && { image_ratios: images.map(() => 1.17) }),
         format: 'markdown+html', links: [],
@@ -93,7 +113,7 @@ function buildJsonMetadataForFeed(
       return JSON.stringify({
         app: 'leothreads/0.3', developer: DEVELOPER,
         isPoll: false, pollOptions: {},
-        tags: ['leofinance', ...DEFAULT_TAGS],
+        tags,
         dimensions: {}, format: 'markdown',
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
@@ -101,13 +121,13 @@ function buildJsonMetadataForFeed(
       return JSON.stringify({
         app: 'peakd/2026.3.1', developer: DEVELOPER,
         image: images.length > 0 ? images : [],
-        tags: ['moments', ...DEFAULT_TAGS],
+        tags,
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
     default:
       return JSON.stringify({
         app: 'peakd/2026.3.1', developer: DEVELOPER,
-        tags: ['hive-178315', 'snaps', ...DEFAULT_TAGS], format: 'markdown',
+        tags, format: 'markdown',
         ...audioMeta, ...videoMeta, ...pollMeta,
       })
   }
@@ -133,6 +153,8 @@ export function FeedComposer({
   const [body, setBody] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pollData, setPollData] = useState<PollData | null>(null)
+  const [tags, setTags] = useState<string[]>([])
+  const [reward, setReward] = useState<RewardOption>('default')
   const provider = (hiveAuthUser?.provider || '').toLowerCase()
   const isWalletProvider = provider === 'keychain' || provider === 'peakvault' || provider === 'hiveauth'
   const awaitingWalletApproval = isSubmitting && isWalletProvider
@@ -144,6 +166,10 @@ export function FeedComposer({
 
   const composeSingleFeedMode = Boolean(containerRefs && selectedFeed)
   const effectiveFeed = composeSingleFeedMode ? selectedFeed! : feedType
+  const defaultTagsForFeed = useMemo(
+    () => getDefaultTagsForFeed(effectiveFeed, replyMode),
+    [effectiveFeed, replyMode],
+  )
   const limit = replyMode ? REPLY_CHAR_LIMIT : FEED_CHAR_LIMITS[effectiveFeed]
   const containerRef = composeSingleFeedMode ? containerRefs?.[effectiveFeed] : null
   const hasActiveFeed = !composeSingleFeedMode || Boolean(containerRef)
@@ -168,12 +194,14 @@ export function FeedComposer({
       const audioInfo = audioMatch ? { url: audioMatch[0], duration: 0 } : null
       const videoInfo = videoMatch ? { url: videoMatch[0], uploadUrl: '', aspectRatio: '16/9' } : null
 
-      const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, audioInfo, videoInfo, pollData)
+      // `tags` is the merged list emitted by PostComposer (defaults first + user additions, capped at 10).
+      const effectiveTags = tags.length > 0 ? tags : defaultTagsForFeed
+      const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, effectiveTags, audioInfo, videoInfo, pollData)
 
       if (composeSingleFeedMode && containerRef) {
-        await comment(containerRef.author, containerRef.permlink, finalBody, '', jsonMetadata)
+        await comment(containerRef.author, containerRef.permlink, finalBody, '', jsonMetadata, reward)
       } else {
-        await comment(parentAuthor!, parentPermlink!, finalBody, '', jsonMetadata)
+        await comment(parentAuthor!, parentPermlink!, finalBody, '', jsonMetadata, reward)
       }
       toast.success('Posted successfully!')
       setBody('')
@@ -228,6 +256,10 @@ export function FeedComposer({
         templateToken={token}
         hidePoll={replyMode}
         onPollChange={(poll) => setPollData(poll)}
+        defaultTags={defaultTagsForFeed}
+        onTagsChange={setTags}
+        defaultReward={reward}
+        onRewardChange={setReward}
       />
     </div>
   )

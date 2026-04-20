@@ -5,6 +5,7 @@ import { useAioha } from "@aioha/react-provider";
 import { KeyTypes } from "@aioha/aioha";
 import { useProgrammaticAuth, useAuthStore } from "hive-authentication";
 import { toast } from "sonner";
+import { buildCommentOptions as buildRewardCommentOptions, type RewardOption } from "hive-react-kit";
 import { getHiveApiNode } from "../stores/hiveNodeStore";
 
 /** Convert percentage (0-100) to Hive vote weight (1% = 100, 100% = 10000) */
@@ -175,7 +176,8 @@ export function useHiveOperations() {
       parentPermlink: string,
       body: string,
       title?: string,
-      jsonMetadata?: string
+      jsonMetadata?: string,
+      reward: RewardOption = 'default'
     ) => {
       if (!username) throw new Error("User not authenticated");
       if (!aioha) throw new Error("Wallet not available");
@@ -196,7 +198,9 @@ export function useHiveOperations() {
         });
 
         const finalBody = withSuffix(body);
-        // Build operations — add comment_options with beneficiaries if audio/video present
+        // Build operations. Reward-routing takes priority (user-selected); fall
+        // back to the 3speak media beneficiary only when the default routing is
+        // kept AND the body contains audio/video.
         const operations: any[] = [
           ['comment', {
             parent_author: parentAuthor,
@@ -208,7 +212,10 @@ export function useHiveOperations() {
             json_metadata: metadata
           }]
         ];
-        if (hasMediaContent(body)) {
+        const rewardOp = buildRewardCommentOptions(username!, permlink, reward);
+        if (rewardOp) {
+          operations.push(rewardOp);
+        } else if (hasMediaContent(body)) {
           operations.push(buildCommentOptions(username!, permlink));
         }
 
