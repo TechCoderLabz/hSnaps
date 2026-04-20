@@ -425,12 +425,75 @@ export function useHiveOperations() {
     [username, getPrivatePostingKey, ensureProgrammaticAuth, aioha]
   );
 
+  const setFollowState = useCallback(
+    async (target: string, what: string[]) => {
+      if (!username) throw new Error("User not authenticated");
+      if (!aioha) throw new Error("Wallet not available");
+      setLoading(true);
+      setError(null);
+      try {
+        if (getPrivatePostingKey()) {
+          await ensureProgrammaticAuth();
+        }
+        await haAuthStore.switchToPostingForCurrentUser();
+        const result = await aioha.signAndBroadcastTx(
+          [
+            [
+              "custom_json",
+              {
+                required_auths: [],
+                required_posting_auths: [username],
+                id: "follow",
+                json: JSON.stringify([
+                  "follow",
+                  { follower: username, following: target, what },
+                ]),
+              },
+            ],
+          ],
+          KeyTypes.Posting
+        );
+        if (!result.success) {
+          throw new Error(
+            (result as any).error || (result as any).message || "Follow operation failed"
+          );
+        }
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Follow operation failed";
+        setError(errorMessage);
+        if (
+          !errorMessage.toLowerCase().includes("cancel") &&
+          !errorMessage.toLowerCase().includes("reject")
+        ) {
+          toast.error(errorMessage);
+        }
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [username, getPrivatePostingKey, ensureProgrammaticAuth, aioha, haAuthStore]
+  );
+
+  const follow = useCallback(
+    (target: string) => setFollowState(target, ["blog"]),
+    [setFollowState]
+  );
+
+  const unfollow = useCallback(
+    (target: string) => setFollowState(target, []),
+    [setFollowState]
+  );
+
   return {
     vote,
     comment,
     editPost,
     commentToMultipleFeeds,
     voteAndComment,
+    follow,
+    unfollow,
     loading,
     error,
   };

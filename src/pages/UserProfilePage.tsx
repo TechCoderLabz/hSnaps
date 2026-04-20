@@ -40,8 +40,8 @@ export function UserProfilePage() {
 
   const navigate = useNavigate()
   const { aioha } = useAioha()
-  const { isAuthenticated, username: currentUsername, ecencyToken, token } = useAuthData()
-  const { vote, comment } = useHiveOperations()
+  const { username: currentUsername, ecencyToken, token } = useAuthData()
+  const { vote, comment, follow, unfollow } = useHiveOperations()
   const haAuthStore = useAuthStore()
 
   const [showTipDialog, setShowTipDialog] = useState(false)
@@ -184,7 +184,7 @@ export function UserProfilePage() {
             'activities',
             'followers',
             'following',
-            ...(isIOS() ? [] : ['wallet']),
+            ...(isIOS() ? [] : ['wallet'] as const),
           ]}
           templateToken={token}
           templateApiBaseUrl={import.meta.env.VITE_TEMPLATE_API_BASE_URL || 'https://hreplier-api.sagarkothari88.one/data/templates'}
@@ -272,6 +272,30 @@ export function UserProfilePage() {
             } catch {
               // toast.error('Could not share link')
               console.error('Share failed')
+            }
+          }}
+          onFollow={async (target) => {
+            try {
+              await follow(target)
+              toast.success(`Followed @${target}`)
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : 'Follow failed'
+              if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
+                toast.info('Follow cancelled')
+              }
+              throw e
+            }
+          }}
+          onUnfollow={async (target) => {
+            try {
+              await unfollow(target)
+              toast.success(`Unfollowed @${target}`)
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : 'Unfollow failed'
+              if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
+                toast.info('Unfollow cancelled')
+              }
+              throw e
             }
           }}
         />
