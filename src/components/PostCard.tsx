@@ -17,7 +17,8 @@ import { VoteSlider } from './comments/VoteSlider'
 import { ReplyComposerModal } from './comments/ReplyComposerModal'
 import { PollView, parsePollFromMetadata } from './PollView'
 import { contentHas3SpeakEmbed } from '../utils/3speak'
-import { getDiscussion } from '../services/hiveService'
+import { getDiscussion, getPost } from '../services/hiveService'
+import { parseBodyFromMarkdown } from '../utils/postBody'
 import type { NormalizedPost } from '../utils/types'
 import { DELETED_POST_BODY } from '../utils/types'
 import { useAuthData } from '../stores/authStore'
@@ -27,6 +28,7 @@ import { useSnapsStore } from '../stores/snapsStore'
 import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
 import { useMomentStore } from '../stores/momentStore'
+import { useUserCommentsStore } from '../stores/userCommentsStore'
 import { isIOS, isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
 import { useAuthStore } from 'hive-authentication'
 
@@ -93,6 +95,40 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
   const setReblogUsername = useReblogStore((s) => s.setUsername)
   const isReblogged = useReblogStore((s) => s.isReblogged(post.author, post.permlink))
   const [checkingReblog, setCheckingReblog] = useState(false)
+
+  // "I already commented on this post" — shown as a red comment icon.
+  // Derived from post.replies (returned by the bridge) + current username,
+  // OR an optimistic session mark set right after a successful in-app reply.
+  const sessionMarked = useUserCommentsStore((s) => s.isMarked(post.author, post.permlink))
+  const markCommented = useUserCommentsStore((s) => s.markCommented)
+  const myReplyKey = useMemo(() => {
+    if (!username || !post.replies?.length) return null
+    const prefix = `${username.toLowerCase()}/`
+    return post.replies.find((key) => key.toLowerCase().startsWith(prefix)) ?? null
+  }, [username, post.replies])
+  const hasCommented = sessionMarked || Boolean(myReplyKey)
+
+  // Hover preview of the current user's reply body — lazy fetched on first hover.
+  const [showCommentPreview, setShowCommentPreview] = useState(false)
+  const [myReplyBody, setMyReplyBody] = useState<string | null>(null)
+  const [loadingMyReply, setLoadingMyReply] = useState(false)
+  const handleCommentHoverEnter = () => {
+    if (!hasCommented) return
+    setShowCommentPreview(true)
+    if (myReplyBody !== null || loadingMyReply || !myReplyKey) return
+    const [rAuthor, rPermlink] = myReplyKey.split('/')
+    if (!rAuthor || !rPermlink) return
+    setLoadingMyReply(true)
+    void getPost(rAuthor, rPermlink)
+      .then((p) => setMyReplyBody(p?.body ?? ''))
+      .catch(() => setMyReplyBody(''))
+      .finally(() => setLoadingMyReply(false))
+  }
+  const myReplyPreviewText = useMemo(() => {
+    if (!myReplyBody) return ''
+    const { plainText } = parseBodyFromMarkdown(myReplyBody)
+    return plainText.trim()
+  }, [myReplyBody])
 
   useEffect(() => {
     setDisplayNetVotes(post.net_votes)
@@ -459,18 +495,46 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
         </div>
 
         <div className="flex items-center">
-          <button
-            type="button"
-            onClick={() => setShowReplyComposer(true)}
-            className={actionBtnClass}
-            aria-label="Reply to post"
+          <div
+            className="relative"
+            onMouseEnter={handleCommentHoverEnter}
+            onMouseLeave={() => setShowCommentPreview(false)}
           >
-            <MessageCircle className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowReplyComposer(true)}
+              className={actionBtnClass}
+              aria-label={hasCommented ? "Reply to post (you've already commented)" : 'Reply to post'}
+            >
+              <MessageCircle
+                className={`h-4 w-4 ${hasCommented ? 'fill-[#e31337] text-[#e31337]' : ''}`}
+              />
+            </button>
+            {hasCommented && showCommentPreview && (
+              <div className="absolute bottom-full left-0 z-30 mb-2 w-72 rounded-lg border border-[#3a424a] bg-[#1f2429] p-3 shadow-xl">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#ff8fa3]">
+                  Your comment
+                </p>
+                {loadingMyReply && (
+                  <p className="text-xs text-[#9ca3b0]">Loading…</p>
+                )}
+                {!loadingMyReply && myReplyPreviewText && (
+                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#e7e7f1] line-clamp-6">
+                    {myReplyPreviewText}
+                  </p>
+                )}
+                {!loadingMyReply && !myReplyPreviewText && myReplyBody !== null && (
+                  <p className="text-xs italic text-[#9ca3b0]">No preview available.</p>
+                )}
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleCommentRoute}
-            className="rounded-lg px-1.5 py-1.5 text-xs font-medium text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8]"
+            className={`rounded-lg px-1.5 py-1.5 text-xs font-medium transition-colors duration-200 hover:bg-[#2f353d] ${
+              hasCommented ? 'text-[#ff8fa3]' : 'text-[#9ca3b0] hover:text-[#f0f0f8]'
+            }`}
             aria-label="Open comments"
           >
             {displayChildren}
@@ -647,6 +711,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           onClose={() => setShowReplyComposer(false)}
           onSuccess={() => {
             setDisplayChildren((prev) => prev + 1)
+            markCommented(post.author, post.permlink)
           }}
           parentAuthor={post.author}
           parentPermlink={post.permlink}

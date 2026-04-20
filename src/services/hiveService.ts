@@ -33,6 +33,8 @@ interface BridgePost {
   active_votes?: Array<{ voter?: string; rshares?: number }>
   stats?: { total_votes?: number; flag_weight?: number; gray?: boolean; hide?: boolean }
   net_rshares?: number
+  /** Array of "author/permlink" keys for direct replies to this post. */
+  replies?: string[]
 }
 
 /** Fallback RPC nodes for condenser_api */
@@ -111,6 +113,21 @@ export async function getAccountPosts(
   return Array.isArray(result) ? result : []
 }
 
+/** bridge.get_post — fetch a single post or reply by author/permlink. */
+export async function getPost(
+  author: string,
+  permlink: string,
+  observer: string = '',
+  signal?: AbortSignal
+): Promise<BridgePost | null> {
+  const result = await callHiveRpc<BridgePost | null>('bridge.get_post', {
+    author,
+    permlink,
+    observer,
+  }, signal)
+  return result ?? null
+}
+
 /** bridge.get_discussion — returns object keyed by "author/permlink", value = full post (incl. replies) */
 export async function getDiscussion(
   author: string,
@@ -172,6 +189,7 @@ export function normalizeBridgePost(d: BridgePost): NormalizedPost {
       : [],
     url: d.url,
     json_metadata: typeof d.json_metadata === 'string' ? d.json_metadata : JSON.stringify(d.json_metadata ?? {}),
+    replies: Array.isArray(d.replies) ? d.replies : undefined,
   }
 }
 

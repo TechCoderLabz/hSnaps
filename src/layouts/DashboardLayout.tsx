@@ -15,15 +15,17 @@ import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { useFollowingStore } from '../stores/followingStore'
 import { useAuthData } from '../stores/authStore'
+import { useUserCommentsStore } from '../stores/userCommentsStore'
 
 export function DashboardLayout() {
   const location = useLocation()
   const columns = useFeedColumnCount()
   const isMobileView = columns === 1
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const { token } = useAuthData()
+  const { token, username } = useAuthData()
   const fetchIgnoredList = useIgnoredAuthorsStore((s) => s.fetchList)
   const setIgnoredList = useIgnoredAuthorsStore((s) => s.setList)
+  const clearUserComments = useUserCommentsStore((s) => s.clear)
   const prevTokenRef = useRef<string | null>(null)
   const previousUserRef = useRef<{ username: string } | null>(null)
 
@@ -44,6 +46,13 @@ export function DashboardLayout() {
       prevTokenRef.current = null
     }
   }, [token, fetchIgnoredList, setIgnoredList])
+
+  // Clear session-local comment marks on logout. The red comment icon in the
+  // feed is driven by post.replies (already on each post) + current username;
+  // the store only holds optimistic marks from replies made this session.
+  useEffect(() => {
+    if (!username) clearUserComments()
+  }, [username, clearUserComments])
 
   // Handle login/logout/switch user: refetch ignored list (from package example snippet)
   useEffect(() => {

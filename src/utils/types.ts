@@ -45,6 +45,8 @@ export interface NormalizedPost {
   }>
   url?: string
   json_metadata?: string
+  /** Array of "author/permlink" keys for direct replies to this post. */
+  replies?: string[]
 }
 
 /** Feed type identifiers */
