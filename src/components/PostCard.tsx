@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { UpvoteListModal } from 'hive-react-kit'
-import { Heart, MessageCircle, Repeat2, Share2, Gift } from 'lucide-react'
+import { ThumbsUp, MessageCircle, Repeat2, Share2, Gift } from 'lucide-react'
 import { AddBookmarkButton } from './AddBookmarkButton'
 import { FeedItemOptions } from './FeedItemOptions'
 import { FeedItemBody } from './FeedItemBody'
@@ -478,7 +478,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
             className={actionBtnClass}
             aria-label="Upvote"
           >
-            <Heart
+            <ThumbsUp
               className={`h-4 w-4 ${
                 hasUserUpvoted ? 'fill-[#e31337] text-[#e31337]' : 'text-[#e31337]'
               }`}
