@@ -108,12 +108,16 @@ export function LandingPage() {
             >
               Open App
             </Link>
-            <a
-              href="#features"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
+              }}
               className="rounded-xl border border-[#505863] px-6 py-3 text-base font-medium text-[#e7e7f1] transition hover:border-[#e31337] hover:text-white"
             >
               See features
-            </a>
+            </button>
             {ios && (
               <Link
                 to="/signup"

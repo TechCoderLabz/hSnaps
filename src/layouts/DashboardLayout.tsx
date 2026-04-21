@@ -10,6 +10,7 @@ import { AppHeader } from '../components/AppHeader'
 import { AppDrawer } from '../components/AppDrawer'
 import { HiveLoginButton } from '../components/HiveLoginButton'
 import { FeedFilterDropdown } from '../components/FeedFilterDropdown'
+import { RefreshFeedsButton } from '../components/RefreshFeedsButton'
 import { useFeedColumnCount } from '../hooks/useFeedColumnCount'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
@@ -106,10 +107,20 @@ export function DashboardLayout() {
   }, [])
 
   const headerRight = isMobileView ? (
-    hideFeedFilter ? null : <FeedFilterDropdown />
+    hideFeedFilter ? null : (
+      <>
+        <RefreshFeedsButton />
+        <FeedFilterDropdown />
+      </>
+    )
   ) : (
     <>
-      {!hideFeedFilter && <FeedFilterDropdown />}
+      {!hideFeedFilter && (
+        <>
+          <RefreshFeedsButton />
+          <FeedFilterDropdown />
+        </>
+      )}
       <HiveLoginButton />
     </>
   )

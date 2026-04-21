@@ -171,6 +171,75 @@ body {
   word-break: break-word;
 }
 
+/* Compact markdown rendering for in-feed posts. Browser defaults are too large
+   for a feed card, so we tighten headings/lists/tables to fit at text-sm. */
+.feed-markdown p { margin: 0.25rem 0; }
+.feed-markdown h1,
+.feed-markdown h2,
+.feed-markdown h3,
+.feed-markdown h4,
+.feed-markdown h5,
+.feed-markdown h6 {
+  margin: 0.5rem 0 0.25rem;
+  font-weight: 600;
+  color: #f0f0f8;
+  line-height: 1.3;
+}
+.feed-markdown h1 { font-size: 1rem; }
+.feed-markdown h2 { font-size: 0.95rem; }
+.feed-markdown h3,
+.feed-markdown h4,
+.feed-markdown h5,
+.feed-markdown h6 { font-size: 0.875rem; }
+.feed-markdown strong { font-weight: 600; color: #f0f0f8; }
+.feed-markdown em { font-style: italic; }
+.feed-markdown ul { list-style: disc; padding-left: 1.25rem; margin: 0.25rem 0; }
+.feed-markdown ol { list-style: decimal; padding-left: 1.25rem; margin: 0.25rem 0; }
+.feed-markdown li { margin: 0.125rem 0; }
+.feed-markdown blockquote {
+  border-left: 3px solid #3a424a;
+  padding: 0.125rem 0.5rem;
+  margin: 0.5rem 0;
+  color: #c8cad6;
+}
+.feed-markdown code {
+  background: #2b3138;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+}
+.feed-markdown pre {
+  background: #2b3138;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+.feed-markdown pre code { background: transparent; padding: 0; }
+.feed-markdown hr { border-color: #3a424a; margin: 0.75rem 0; }
+.feed-markdown a { color: #ff5b78; text-decoration: underline; }
+
+/* Tables: scrollable on overflow, dense cells, dark dividers */
+.feed-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.8125rem;
+  display: block;
+  overflow-x: auto;
+}
+.feed-markdown thead { background: #2b3138; }
+.feed-markdown th,
+.feed-markdown td {
+  border: 1px solid #3a424a;
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.feed-markdown th { font-weight: 600; color: #f0f0f8; }
+
 /* Twitter/X embeds — constrain the wrapper */
 .markdown-preview .twitter-tweet,
 .markdown-preview blockquote[class*="twitter"] {

@@ -36,6 +36,8 @@ function stripAppPromo(body: string): string {
 
 export interface ParsedPostBody {
   plainText: string
+  /** Original markdown body with media URLs and image syntax removed, formatting preserved. */
+  bodyForMarkdown: string
   imageUrls: string[]
   threeSpeakUrls: Array<{ url: string; author: string; permlink: string }>
   /** 3Speak audio URLs for iframe embed (audio.3speak.tv/play?a=...) */
@@ -184,6 +186,35 @@ function stripStandaloneImageUrlsFromText(text: string, imageUrls: string[]): st
   return s
 }
 
+/**
+ * Strip media URLs and image markdown from a body while preserving markdown formatting
+ * (bold, italics, tables, headings, lists, code, blockquotes). Used for in-feed markdown render.
+ */
+function stripMediaFromMarkdown(
+  body: string,
+  imageUrls: string[],
+  threeSpeakUrls: string[],
+  threeSpeakAudioUrls: string[],
+  audioFileUrls: string[]
+): string {
+  let s = body
+  s = s.replace(/!\s*\[[^\]]*\]\s*\([\s\S]*?\)/g, '')
+  // Strip raw <iframe> tags (self-closing or paired). Embeds are surfaced via the
+  // attachment strip, and the Hive renderer's whitelist rejects them anyway.
+  s = s.replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '')
+  s = s.replace(/<iframe\b[^>]*\/?>/gi, '')
+  for (const url of [...imageUrls, ...threeSpeakUrls, ...threeSpeakAudioUrls, ...audioFileUrls]) {
+    s = s.split(url).join('')
+  }
+  s = s.replace(/https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^/\s]+\/status\/\d+/gi, '')
+  s = s.replace(
+    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[^\s)]+|https?:\/\/youtu\.be\/[^\s)]+|https?:\/\/(?:www\.)?youtube\.com\/shorts\/[^\s)]+/gi,
+    ''
+  )
+  s = s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  return s
+}
+
 export function parsePostBody(post: NormalizedPost): ParsedPostBody {
   const body = stripLiketuPromo(stripAppSuffix(post.body ?? ''))
   const imageUrlsFromMetaAndMarkdown = getPostImageUrls(post)
@@ -251,8 +282,17 @@ export function parsePostBody(post: NormalizedPost): ParsedPostBody {
   }
   plainText = plainText.replace(/\s{2,}/g, ' ').replace(/\n\s*\n\s*\n/g, '\n\n').trim()
 
+  const bodyForMarkdown = stripMediaFromMarkdown(
+    body,
+    imageUrls,
+    threeSpeakUrls.map((x) => x.url),
+    threeSpeakAudioUrls,
+    audioFileUrls
+  )
+
   return {
     plainText,
+    bodyForMarkdown,
     imageUrls,
     threeSpeakUrls,
     threeSpeakAudioUrls,

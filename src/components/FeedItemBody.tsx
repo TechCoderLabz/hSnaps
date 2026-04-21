@@ -13,6 +13,8 @@ import { openLink } from '../utils/openLink'
 import { parseHiveFrontendUrl } from 'hive-react-kit'
 import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
+import { HtmlWith3Speak } from './HtmlWith3Speak'
+import { useMarkdownRenderer } from '../hooks/useMarkdownRenderer'
 import { getHiveProxyThumbnailUrl, proxyImageUrl } from '../utils/imageProxy'
 import { useVideoPlaybackStore } from '../stores/videoPlaybackStore'
 import { isMobilePlatform } from '../utils/platform-detection'
@@ -372,8 +374,21 @@ function ImageThumbnail({
   onClick: () => void
 }) {
   const thumbUrl = getHiveProxyThumbnailUrl(url)
-  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
-  const loading = loadedSrc !== thumbUrl
+  const [src, setSrc] = useState(thumbUrl)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    setSrc(thumbUrl)
+    setLoaded(false)
+  }, [thumbUrl])
+
+  const handleError = () => {
+    if (src !== url) {
+      setSrc(url)
+    } else {
+      setLoaded(true)
+    }
+  }
 
   return (
     <button
@@ -382,19 +397,19 @@ function ImageThumbnail({
       className="relative flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#1a1e22]"
       aria-label="View image"
     >
-      {loading && (
+      {!loaded && (
         <div className="absolute inset-0 z-[5] flex items-center justify-center bg-[#1a1e22]">
           <span className="inline-block h-8 w-8 animate-spin rounded-full border-3 border-[#e31337] border-t-transparent" />
         </div>
       )}
       <img
-        src={thumbUrl}
+        src={src}
         alt=""
         className="max-h-full max-w-full object-contain"
         loading="lazy"
         draggable={false}
-        onLoad={() => setLoadedSrc(thumbUrl)}
-        onError={() => setLoadedSrc(thumbUrl)}
+        onLoad={() => setLoaded(true)}
+        onError={handleError}
       />
     </button>
   )
@@ -629,25 +644,22 @@ export function ParsedBodyContent({
         </div>
       )}
 
-      {/* Text content */}
-      {parsed.plainText && (
-        <div className="whitespace-pre-line break-words text-sm leading-relaxed text-zinc-300">
-          {plainTextToSegments(parsed.plainText).map((seg, i) =>
-            seg.type === 'text' ? (
-              <span key={i}>
-                {highlightQuery ? highlightText(seg.value, highlightQuery) : seg.value}
-              </span>
-            ) : seg.type === 'link' ? (
-              <LinkSegment key={i} url={seg.url} />
-            ) : seg.type === 'hashtag' ? (
-              <HashtagSegment key={i} tag={seg.tag} />
-            ) : (
-              <MentionSegment key={i} username={seg.username} />
-            )
-          )}
-        </div>
+      {/* Markdown body — preserves bold/italic/tables/headings/lists at small size */}
+      {parsed.bodyForMarkdown && (
+        <MarkdownBody markdown={parsed.bodyForMarkdown} />
       )}
     </div>
+  )
+}
+
+function MarkdownBody({ markdown }: { markdown: string }) {
+  const render = useMarkdownRenderer()
+  const html = useMemo(() => render(markdown), [markdown, render])
+  return (
+    <HtmlWith3Speak
+      html={html}
+      className="markdown-preview feed-markdown break-words text-sm leading-relaxed text-zinc-300"
+    />
   )
 }
 
