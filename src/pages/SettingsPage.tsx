@@ -3,7 +3,8 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, ExternalLink, FileText, Server, Shield, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { ChevronRight, ExternalLink, FileText, Globe, Server, Shield, Trash2 } from 'lucide-react'
 import { useAuthStore } from 'hive-authentication'
 import { toast } from 'sonner'
 import { APP_VERSION } from '../config/appVersion'
@@ -12,11 +13,13 @@ import { useAuthData, useAppAuthStore } from '../stores/authStore'
 import { useHiveNodeStore, HIVE_API_NODE_OPTIONS } from '../stores/hiveNodeStore'
 import type { HiveApiNode } from '../stores/hiveNodeStore'
 import { isIOS } from '../utils/platform-detection'
+import { SUPPORTED_LANGUAGES, setLanguage } from '../i18n'
 
 const HD_API_SERVER =
   import.meta.env.VITE_HIVE_API_SERVER || 'https://hreplier-api.sagarkothari88.one'
 
 export function SettingsPage() {
+  const { t, i18n } = useTranslation()
   const { isAuthenticated, token } = useAuthData()
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser)
   const clearAuth = useAppAuthStore((s) => s.clearAuth)
@@ -24,10 +27,19 @@ export function SettingsPage() {
   const setHiveApiNode = useHiveNodeStore((s) => s.setHiveApiNode)
   const navigate = useNavigate()
 
+  const [currentLang, setCurrentLang] = useState<string>(
+    i18n.resolvedLanguage || i18n.language || 'en',
+  )
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteReady, setDeleteReady] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [])
 
   useEffect(() => {
     if (showDeleteConfirm) {
@@ -38,6 +50,11 @@ export function SettingsPage() {
       }
     }
   }, [showDeleteConfirm])
+
+  const handleLanguageChange = (code: string) => {
+    setCurrentLang(code)
+    setLanguage(code)
+  }
 
   const handleDeleteAccount = async () => {
     setDeleting(true)
@@ -51,14 +68,14 @@ export function SettingsPage() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error((data as { error?: string }).error ?? 'Delete failed')
+        throw new Error((data as { error?: string }).error ?? t('settings.deleteAccount.failed'))
       }
       setCurrentUser(null)
       clearAuth()
-      toast.success('Account deleted successfully')
+      toast.success(t('settings.deleteAccount.successToast'))
       navigate('/')
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Delete failed'
+      const msg = e instanceof Error ? e.message : t('settings.deleteAccount.failed')
       toast.error(msg)
     } finally {
       setDeleting(false)
@@ -71,12 +88,36 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-8">
-      <h1 className="text-xl font-bold text-[#f0f0f8]">Settings</h1>
+      <h1 className="text-xl font-bold text-[#f0f0f8]">{t('settings.title')}</h1>
 
       <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85 px-4 py-3">
         <div className="flex items-center justify-between">
-          <span className="font-medium text-[#f0f0f8]">App version</span>
+          <span className="font-medium text-[#f0f0f8]">{t('settings.appVersion')}</span>
           <span className="text-[#9ca3b0] tabular-nums">v{APP_VERSION}</span>
+        </div>
+      </section>
+
+      {/* Language */}
+      <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85 px-4 py-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Globe className="h-5 w-5 shrink-0 text-[#e31337]" />
+            <div>
+              <h3 className="font-medium text-[#f0f0f8]">{t('settings.language.title')}</h3>
+              <p className="text-xs text-[#9ca3b0]">{t('settings.language.description')}</p>
+            </div>
+          </div>
+          <select
+            value={currentLang}
+            onChange={(e) => handleLanguageChange(e.target.value)}
+            className="w-full rounded-lg border border-[#3a424a] bg-[#1a1e22] px-3 py-2 text-sm text-white focus:border-transparent focus:ring-2 focus:ring-[#e31337] outline-none"
+          >
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.label}
+              </option>
+            ))}
+          </select>
         </div>
       </section>
 
@@ -86,8 +127,8 @@ export function SettingsPage() {
           <div className="flex items-center gap-3">
             <Server className="h-5 w-5 shrink-0 text-[#e31337]" />
             <div>
-              <h3 className="font-medium text-[#f0f0f8]">Hive API Node</h3>
-              <p className="text-xs text-[#9ca3b0]">Choose your preferred Hive API node for data fetching</p>
+              <h3 className="font-medium text-[#f0f0f8]">{t('settings.hiveApiNode.title')}</h3>
+              <p className="text-xs text-[#9ca3b0]">{t('settings.hiveApiNode.description')}</p>
             </div>
           </div>
           <select
@@ -111,7 +152,7 @@ export function SettingsPage() {
         >
           <span className="flex items-center gap-3 font-medium">
             <Shield className="h-5 w-5 shrink-0 text-[#e31337]" />
-            Child safety (CSAE) standards
+            {t('settings.links.csae')}
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-[#9ca3b0]" />
         </Link>
@@ -121,7 +162,7 @@ export function SettingsPage() {
         >
           <span className="flex items-center gap-3 font-medium">
             <FileText className="h-5 w-5 shrink-0 text-[#e31337]" />
-            End-User License Agreement
+            {t('settings.links.eula')}
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-[#9ca3b0]" />
         </Link>
@@ -139,7 +180,7 @@ export function SettingsPage() {
               width={20}
               height={20}
             />
-            Contact Support
+            {t('settings.links.support')}
           </span>
           <ExternalLink className="h-4 w-4 shrink-0 text-[#9ca3b0]" />
         </a>
@@ -154,8 +195,8 @@ export function SettingsPage() {
             className="h-14 w-14 shrink-0 rounded-full object-cover border border-[#505863]"
           />
           <div className="min-w-0">
-            <h3 className="text-lg font-medium text-[#f0f0f8]">Vote Us</h3>
-            <p className="text-sm text-[#9ca3b0]">Support @sagarkothari88 on Hive</p>
+            <h3 className="text-lg font-medium text-[#f0f0f8]">{t('settings.voteUs.title')}</h3>
+            <p className="text-sm text-[#9ca3b0]">{t('settings.voteUs.description')}</p>
           </div>
         </div>
         <div className="mt-4 flex justify-center">
@@ -164,7 +205,7 @@ export function SettingsPage() {
             onClick={handleVoteUs}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#e31337] px-4 py-2 text-white transition-colors hover:bg-[#c51231] sm:w-auto"
           >
-            <span>Vote</span>
+            <span>{t('settings.voteUs.button')}</span>
             <ExternalLink className="h-4 w-4" />
           </button>
         </div>
@@ -210,12 +251,12 @@ export function SettingsPage() {
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20"
             >
               <Trash2 className="h-4 w-4" />
-              Delete Account
+              {t('settings.deleteAccount.button')}
             </button>
           ) : (
             <div>
               <p className="text-center text-sm font-semibold text-red-400 animate-pulse">
-                Are you sure you want to delete your account?
+                {t('settings.deleteAccount.confirmTitle')}
               </p>
               <div className="mt-4 flex justify-center gap-3">
                 <button
@@ -224,7 +265,7 @@ export function SettingsPage() {
                   disabled={deleting}
                   className="rounded-lg border border-[#3a424a] bg-[#262b30] px-4 py-2 text-sm font-medium text-[#f0f0f8] transition-colors hover:bg-[#2f353d] disabled:opacity-50"
                 >
-                  Oops! No.
+                  {t('settings.deleteAccount.cancel')}
                 </button>
                 <button
                   type="button"
@@ -232,7 +273,11 @@ export function SettingsPage() {
                   disabled={!deleteReady || deleting}
                   className="rounded-lg border border-red-500/60 bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-40"
                 >
-                  {deleting ? 'Deleting...' : !deleteReady ? 'Wait...' : 'Yes! Delete It!'}
+                  {deleting
+                    ? t('settings.deleteAccount.deleting')
+                    : !deleteReady
+                      ? t('settings.deleteAccount.wait')
+                      : t('settings.deleteAccount.confirm')}
                 </button>
               </div>
             </div>

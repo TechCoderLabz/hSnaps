@@ -1,0 +1,34 @@
+{
+  "settings": {
+    "title": "Settings",
+    "appVersion": "App version",
+    "language": {
+      "title": "Language",
+      "description": "Choose your preferred language for the app interface"
+    },
+    "hiveApiNode": {
+      "title": "Hive API Node",
+      "description": "Choose your preferred Hive API node for data fetching"
+    },
+    "links": {
+      "csae": "Child safety (CSAE) standards",
+      "eula": "End-User License Agreement",
+      "support": "Contact Support"
+    },
+    "voteUs": {
+      "title": "Vote Us",
+      "description": "Support @sagarkothari88 on Hive",
+      "button": "Vote"
+    },
+    "deleteAccount": {
+      "button": "Delete Account",
+      "confirmTitle": "Are you sure you want to delete your account?",
+      "cancel": "Oops! No.",
+      "confirm": "Yes! Delete It!",
+      "wait": "Wait...",
+      "deleting": "Deleting...",
+      "successToast": "Account deleted successfully",
+      "failed": "Delete failed"
+    }
+  }
+}

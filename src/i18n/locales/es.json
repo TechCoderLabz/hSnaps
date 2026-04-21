@@ -1,0 +1,34 @@
+{
+  "settings": {
+    "title": "Ajustes",
+    "appVersion": "Versión de la aplicación",
+    "language": {
+      "title": "Idioma",
+      "description": "Elige tu idioma preferido para la interfaz de la aplicación"
+    },
+    "hiveApiNode": {
+      "title": "Nodo API de Hive",
+      "description": "Elige tu nodo API de Hive preferido para la obtención de datos"
+    },
+    "links": {
+      "csae": "Normas de seguridad infantil (CSAE)",
+      "eula": "Acuerdo de licencia de usuario final",
+      "support": "Contactar con soporte"
+    },
+    "voteUs": {
+      "title": "Vótanos",
+      "description": "Apoya a @sagarkothari88 en Hive",
+      "button": "Votar"
+    },
+    "deleteAccount": {
+      "button": "Eliminar cuenta",
+      "confirmTitle": "¿Estás seguro de que deseas eliminar tu cuenta?",
+      "cancel": "¡Ups! No.",
+      "confirm": "¡Sí, elimínala!",
+      "wait": "Espera...",
+      "deleting": "Eliminando...",
+      "successToast": "Cuenta eliminada correctamente",
+      "failed": "Error al eliminar"
+    }
+  }
+}
