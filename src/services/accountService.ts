@@ -1,5 +1,11 @@
+import { isIOS } from '../utils/platform-detection'
+
 const API_SERVER =
   import.meta.env.VITE_HIVE_API_SERVER || 'https://hreplier-api.sagarkothari88.one'
+
+function platformHeaders(): Record<string, string> {
+  return isIOS() ? { 'X-Client-Platform': 'capacitor-ios' } : {}
+}
 
 export interface CheckUsernameResult {
   username: string
@@ -19,7 +25,9 @@ export interface CreateAccountResult {
 }
 
 export async function checkUsername(username: string): Promise<CheckUsernameResult> {
-  const res = await fetch(`${API_SERVER}/account/check-username/${encodeURIComponent(username)}`)
+  const res = await fetch(`${API_SERVER}/account/check-username/${encodeURIComponent(username)}`, {
+    headers: platformHeaders(),
+  })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Request failed' }))
     throw new Error(err.error || `HTTP ${res.status}`)
@@ -33,7 +41,7 @@ export async function createAccount(
 ): Promise<CreateAccountResult> {
   const res = await fetch(`${API_SERVER}/account/create`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...platformHeaders() },
     body: JSON.stringify({ username, password }),
   })
   if (!res.ok) {

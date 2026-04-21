@@ -47,5 +47,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>hSnaps needs access to your camera so you can take photos and videos to share in your snaps.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>hSnaps needs access to your microphone so you can record audio and capture videos with sound for your snaps.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>hSnaps needs access to your photo library so you can choose photos and videos to share in your snaps.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>hSnaps needs permission to save photos to your library.</string>
 </dict>
 </plist>
