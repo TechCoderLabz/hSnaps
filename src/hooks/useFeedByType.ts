@@ -5,6 +5,7 @@ import { useThreadsStore } from '../stores/threadsStore'
 import { useWavesStore } from '../stores/wavesStore'
 import { useMomentStore } from '../stores/momentStore'
 import { useBlacklistStore, isBlacklisted } from '../stores/blacklistStore'
+import { useAbusiveUsersStore, isAbusive } from '../stores/abusiveUsersStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { useFollowingStore } from '../stores/followingStore'
@@ -51,13 +52,14 @@ export function useFeedByType(feedType: UnifiedFeedType) {
           : moments
 
   const blacklist = useBlacklistStore((s) => s.set)
+  const abusive = useAbusiveUsersStore((s) => s.set)
   const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
   const feedFilter = useFeedFilterStore((s) => s.feedFilter)
   const isFollowing = useFollowingStore((s) => s.isFollowing)
   const username = useAuthData().username ?? ''
 
   let filteredPosts = state.posts.filter(
-    (p) => !isBlacklisted(blacklist, p.author) && !isIgnored(p.author)
+    (p) => !isBlacklisted(blacklist, p.author) && !isAbusive(abusive, p.author) && !isIgnored(p.author)
   )
 
   switch (feedFilter) {

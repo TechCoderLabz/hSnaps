@@ -6,8 +6,10 @@ import { AppRoutes } from './app/AppRoutes'
 import { AuthProvider } from './context/AuthContext'
 import { EulaGate } from './components/EulaGate'
 import { useBlacklistStore } from './stores/blacklistStore'
+import { useAbusiveUsersStore } from './stores/abusiveUsersStore'
 
 void useBlacklistStore.getState().ensureFresh()
+void useAbusiveUsersStore.getState().ensureFresh()
 
 // Single Aioha instance configured similarly to the reference app
 const aioha = initAioha({

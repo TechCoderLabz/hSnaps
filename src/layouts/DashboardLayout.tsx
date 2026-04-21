@@ -15,6 +15,7 @@ import { useFeedColumnCount } from '../hooks/useFeedColumnCount'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { useFollowingStore } from '../stores/followingStore'
+import { refreshFeed } from '../hooks/useFeedByType'
 import { useAuthData } from '../stores/authStore'
 import { useUserCommentsStore } from '../stores/userCommentsStore'
 
@@ -68,6 +69,13 @@ export function DashboardLayout() {
         useIgnoredAuthorsStore.getState().setList([])
         useFeedFilterStore.getState().setFeedFilter('newest')
         useFollowingStore.getState().reset()
+        // Re-fetch all feeds without observer. Each fetchFeed also force-refreshes
+        // the abusive-users list, so posts from users blacklisted since app start
+        // (e.g. @mfontom) are re-filtered once the new data lands.
+        void refreshFeed('snaps')
+        void refreshFeed('threads')
+        void refreshFeed('waves')
+        void refreshFeed('moments')
       } else if (
         currentUser &&
         previousUser &&

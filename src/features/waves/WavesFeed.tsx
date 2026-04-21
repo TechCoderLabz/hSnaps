@@ -3,6 +3,7 @@ import Masonry from 'react-masonry-css'
 import { useWavesStore } from '../../stores/wavesStore'
 import { useAuthData } from '../../stores/authStore'
 import { useBlacklistStore, isBlacklisted } from '../../stores/blacklistStore'
+import { useAbusiveUsersStore, isAbusive } from '../../stores/abusiveUsersStore'
 import { useIgnoredAuthorsStore } from '../../stores/ignoredAuthorsStore'
 import { useViewStore } from '../../stores/viewStore'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
@@ -19,6 +20,7 @@ export function WavesFeed() {
   const { isAuthenticated } = useAuthData()
   const { posts, loading, error, hasMore, fetchFeed, loadMore } = useWavesStore()
   const blacklist = useBlacklistStore((s) => s.set)
+  const abusive = useAbusiveUsersStore((s) => s.set)
   const viewMode = useViewStore((s) => s.viewMode)
   const isDesktop = useIsDesktop()
   const useGrid = isDesktop && viewMode === 'grid'
@@ -31,7 +33,7 @@ export function WavesFeed() {
 
   const isIgnored = useIgnoredAuthorsStore((s) => s.isIgnored)
   const filteredPosts = posts.filter(
-    (p) => !isBlacklisted(blacklist, p.author) && !isIgnored(p.author)
+    (p) => !isBlacklisted(blacklist, p.author) && !isAbusive(abusive, p.author) && !isIgnored(p.author)
   )
 
   const renderItems = (items: React.ReactNode) =>

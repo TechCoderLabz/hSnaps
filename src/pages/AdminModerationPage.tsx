@@ -28,12 +28,11 @@ export function AdminModerationPage() {
   const [marking, setMarking] = useState(false)
 
   const load = async () => {
-    if (!token) return
     setLoading(true)
     try {
       const [r, a] = await Promise.all([
         getReportedUsersSummary(token),
-        getAbusiveUsers(token),
+        getAbusiveUsers(),
       ])
       setReported(r)
       setAbusive(a)

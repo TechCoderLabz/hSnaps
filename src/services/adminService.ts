@@ -19,8 +19,8 @@ export interface ReportedUserSummary {
   reports: { reportedBy: string; reason: string; createdAt: string }[]
 }
 
-export async function getAbusiveUsers(token: string): Promise<AbusiveUser[]> {
-  const res = await fetch(`${API_SERVER}/admin/abusive-users`, { headers: authHeaders(token) })
+export async function getAbusiveUsers(): Promise<AbusiveUser[]> {
+  const res = await fetch(`${API_SERVER}/admin/abusive-users`)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`)
   return res.json()
 }

@@ -7,6 +7,7 @@ import type { NormalizedPost } from '../utils/types'
 import { fetchFeedPage, type FeedPageCursor } from '../services/hiveService'
 import type { FeedType } from '../utils/types'
 import { useAppAuthStore } from './authStore'
+import { useAbusiveUsersStore } from './abusiveUsersStore'
 
 export interface FeedState {
   posts: NormalizedPost[]
@@ -38,6 +39,7 @@ export function createFeedStore(feedType: FeedType) {
     ...initialState,
     fetchFeed: async (signal?: AbortSignal) => {
       set({ loading: true, error: null, page: 1, nextCursor: null })
+      void useAbusiveUsersStore.getState().refresh()
       const observer = useAppAuthStore.getState().username ?? ''
       try {
         const { posts, hasMore, nextCursor } = await fetchFeedPage(feedType, 1, observer, null, signal)
@@ -61,6 +63,7 @@ export function createFeedStore(feedType: FeedType) {
       const { page, nextCursor, loading, hasMore } = get()
       if (loading || !hasMore) return
       set({ loading: true })
+      void useAbusiveUsersStore.getState().refresh()
       const observer = useAppAuthStore.getState().username ?? ''
       const nextPage = page + 1
       try {
