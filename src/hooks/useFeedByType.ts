@@ -21,6 +21,13 @@ const FETCH_BY_TYPE = {
   moments: (signal?: AbortSignal) => useMomentStore.getState().fetchFeed(signal),
 } as const
 
+const GET_STATE_BY_TYPE = {
+  snaps: () => useSnapsStore.getState(),
+  threads: () => useThreadsStore.getState(),
+  waves: () => useWavesStore.getState(),
+  moments: () => useMomentStore.getState(),
+} as const
+
 const feedSliceSelector = (s: {
   posts: NormalizedPost[]
   loading: boolean
@@ -92,6 +99,11 @@ export function useFeedByType(feedType: UnifiedFeedType) {
   }
 
   useEffect(() => {
+    // Don't re-fetch on remount when the store already has data: that would
+    // reset pagination back to page 1 and cause a flicker when returning from
+    // post detail or after an upvote/comment. Use refreshFeed() for explicit
+    // refresh (pull-to-refresh, refresh button, logout).
+    if (GET_STATE_BY_TYPE[feedType]().posts.length > 0) return
     const abortController = new AbortController()
     FETCH_BY_TYPE[feedType](abortController.signal)
     return () => { abortController.abort('avoid duplicate requests') }

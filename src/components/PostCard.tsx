@@ -457,7 +457,7 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
         className="px-4 pt-2 pb-1 overflow-hidden cursor-pointer"
         onClick={(e) => {
           const target = e.target as HTMLElement
-          if (target.closest('a, button, input, textarea, select, video, iframe, img, [role="button"]')) return
+          if (target.closest('a, button, input, textarea, select, video, iframe, img, [role="button"], [role="dialog"]')) return
           handleCommentRoute()
         }}
       >

@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useFeedColumnCount } from '../../hooks/useFeedColumnCount'
 import { useMobileFeedStore } from '../../stores/mobileFeedStore'
 import type { UnifiedFeedType } from '../../hooks/useFeedByType'
+import { useFeedScrollRestore } from '../../hooks/useFeedScrollRestore'
 import { FeedSegmentControl } from '../../components/FeedSegmentControl'
 import { FeedColumnContent } from '../../components/FeedColumnContent'
 import { ComposeFab } from '../../components/ComposeFab'
@@ -26,10 +27,14 @@ export function UnifiedFeedPage() {
   const [col1Feed, setCol1Feed] = useState<UnifiedFeedType>('snaps')
   const [col2Feed, setCol2Feed] = useState<UnifiedFeedType>('threads')
 
+  const mobileScrollRef = useFeedScrollRestore(mobileFeed)
+  const col1ScrollRef = useFeedScrollRestore(col1Feed)
+  const col2ScrollRef = useFeedScrollRestore(col2Feed)
+
   if (columns === 1) {
     return (
       <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={mobileScrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <FeedColumnContent feedType={mobileFeed} />
         </div>
         <ComposeFab feedType={mobileFeed} placeholder="What's snapping?" />
@@ -48,7 +53,7 @@ export function UnifiedFeedPage() {
               onChange={(id) => setCol1Feed(id as UnifiedFeedType)}
             />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={col1ScrollRef} className="min-h-0 flex-1 overflow-y-auto">
             <FeedColumnContent feedType={col1Feed} />
           </div>
         </div>
@@ -60,7 +65,7 @@ export function UnifiedFeedPage() {
               onChange={(id) => setCol2Feed(id as UnifiedFeedType)}
             />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={col2ScrollRef} className="min-h-0 flex-1 overflow-y-auto">
             <FeedColumnContent feedType={col2Feed} />
           </div>
         </div>

@@ -17,7 +17,6 @@ import { HtmlWith3Speak } from './HtmlWith3Speak'
 import { useMarkdownRenderer } from '../hooks/useMarkdownRenderer'
 import { getHiveProxyThumbnailUrl, proxyImageUrl } from '../utils/imageProxy'
 import { useVideoPlaybackStore } from '../stores/videoPlaybackStore'
-import { isMobilePlatform } from '../utils/platform-detection'
 
 /* ------------------------------------------------------------------ */
 /*  Shared text helpers                                               */
@@ -268,38 +267,52 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
   // Mobile: fullscreen. Tablet/desktop: fit content, center it.
   const isCompact = attachment.kind === 'audio' || attachment.kind === '3speak-audio'
 
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation()
+  const closeAndStop = (e: React.SyntheticEvent) => { e.stopPropagation(); onClose() }
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-black/10 sm:items-center sm:justify-center sm:bg-black/85 sm:p-6"
+      className="fixed inset-0 z-[100] flex flex-col bg-black/80 sm:items-center sm:justify-center sm:bg-black/85 sm:p-6"
       role="dialog"
       aria-modal="true"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={closeAndStop}
+      onPointerDown={stop}
+      onTouchEnd={stop}
     >
-      {/* Header bar with close button — always at top, never overlapping content */}
-      <div className={`flex shrink-0 items-center justify-between px-4 py-3 sm:hidden ${isMobilePlatform() ? 'pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] bg-black/30' : ''}`}>
-        <span className="text-sm font-medium text-white/70">{attachmentLabel(attachment)}</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5" />
-        </button>
+      {/* Mobile title strip — safe-area + app-header clearance */}
+      <div
+        className="flex shrink-0 items-center bg-black/40 px-4 py-3 pt-[calc(env(safe-area-inset-top,0px)+4rem)] sm:hidden"
+        onClick={stop}
+      >
+        <span className="truncate text-sm font-medium text-white/80">{attachmentLabel(attachment)}</span>
       </div>
+
+      {/* Floating close button (mobile) — stays above iframe content, always tappable */}
+      <button
+        type="button"
+        onClick={closeAndStop}
+        onPointerDown={stop}
+        className="fixed right-3 top-[calc(env(safe-area-inset-top,0px)+4rem)] z-[110] flex h-11 w-11 items-center justify-center rounded-full bg-black/80 text-white shadow-lg ring-1 ring-white/30 transition hover:bg-black sm:hidden"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
 
       {/* Content container — fullscreen on mobile, fitted card on sm+ */}
       <div
-        className={`flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-[#3a424a] bg-[#1a1e22] shadow-2xl sm:flex-initial sm:overflow-visible ${
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#1a1e22] shadow-2xl sm:flex-initial sm:overflow-visible sm:rounded-2xl sm:border sm:border-[#3a424a] ${
           isCompact ? 'sm:max-w-md' : 'sm:max-w-2xl'
         } sm:w-full`}
       >
         {/* Desktop close button — outside iframe area */}
-        <div className="hidden sm:flex shrink-0 items-center justify-between border-b border-[#3a424a]/60 px-4 py-2.5">
+        <div
+          className="hidden shrink-0 items-center justify-between border-b border-[#3a424a]/60 px-4 py-2.5 sm:flex"
+          onClick={stop}
+        >
           <span className="text-sm font-medium text-white/70">{attachmentLabel(attachment)}</span>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeAndStop}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
             aria-label="Close"
           >
@@ -307,12 +320,13 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
           </button>
         </div>
 
-        <div
-          className="flex flex-1 flex-col items-center justify-center p-3 sm:p-4"
-          onClick={(e) => e.target === e.currentTarget && onClose()}
-        >
+        <div className="flex flex-1 flex-col items-center justify-center p-3 sm:p-4">
           {attachment.kind === 'youtube' && (
-            <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
+            <div
+              className="w-full overflow-hidden rounded-lg"
+              style={{ aspectRatio: '16/9' }}
+              onClick={stop}
+            >
               <iframe
                 src={`https://www.youtube.com/embed/${attachment.id}?autoplay=1&rel=0`}
                 title="YouTube video"
@@ -324,17 +338,22 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
           )}
 
           {attachment.kind === 'twitter' && (
-            <TwitterEmbed id={attachment.id} />
+            <div className="w-full" onClick={stop}>
+              <TwitterEmbed id={attachment.id} />
+            </div>
           )}
 
           {attachment.kind === '3speak' && (
-            <div className="w-full">
+            <div className="w-full" onClick={stop}>
               <ThreeSpeakPlayer author={attachment.author} permlink={attachment.permlink} />
             </div>
           )}
 
           {attachment.kind === '3speak-audio' && (
-            <div className="w-full overflow-hidden rounded-lg border border-[#3a424a] bg-[#1a1d21]">
+            <div
+              className="w-full overflow-hidden rounded-lg border border-[#3a424a] bg-[#1a1d21]"
+              onClick={stop}
+            >
               <iframe
                 src={attachment.url}
                 title="3Speak audio"
@@ -347,7 +366,10 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
           {attachment.kind === 'audio' && (() => {
             const fileName = decodeURIComponent(attachment.url.split('/').pop()?.split('?')[0] ?? 'Audio')
             return (
-              <div className="w-full overflow-hidden rounded-xl border border-[#3a424a] bg-[#1a1d21] p-3">
+              <div
+                className="w-full overflow-hidden rounded-xl border border-[#3a424a] bg-[#1a1d21] p-3"
+                onClick={stop}
+              >
                 <div className="mb-2 flex items-center gap-2 text-sm text-[#9ca3b0]">
                   <Music className="h-4 w-4 shrink-0 text-[#e31337]" />
                   <span className="truncate">{fileName}</span>

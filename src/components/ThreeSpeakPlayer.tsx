@@ -22,7 +22,6 @@ export function ThreeSpeakPlayer({ author, permlink, className = '' }: ThreeSpea
         src={src}
         title={`3Speak video by ${author}`}
         className="h-full w-full border-0"
-        allowFullScreen
         loading="lazy"
       />
     </div>

@@ -106,7 +106,12 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
       role="dialog"
       aria-modal="true"
       aria-label="Image preview"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (e.target === e.currentTarget) onClose()
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
     >
       {/* Rounded bordered container */}
       <div className="relative flex max-h-[90vh] max-w-[90vw] flex-1 flex-col overflow-hidden rounded-2xl border-2 border-[#3a424a] bg-[#1a1e22] shadow-2xl">
@@ -114,7 +119,7 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
         <div className="absolute right-2 top-2 z-10 sm:right-3 sm:top-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={(e) => { e.stopPropagation(); onClose() }}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-[#e31337]"
             aria-label="Close preview"
           >
@@ -145,7 +150,10 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerUp}
           onPointerCancel={onPointerUp}
-          onClick={(e) => e.target === e.currentTarget && onClose()}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (e.target === e.currentTarget) onClose()
+          }}
         >
           {imageLoading && (
             <div className="absolute inset-0 z-[5] flex items-center justify-center bg-[#1a1e22]">
