@@ -21,9 +21,17 @@ function isDataOrBlob(url: string): boolean {
   return url.startsWith('data:') || url.startsWith('blob:')
 }
 
+function isGif(url: string): boolean {
+  const q = url.indexOf('?')
+  const path = (q === -1 ? url : url.slice(0, q)).toLowerCase()
+  return path.endsWith('.gif')
+}
+
 /**
  * Proxy any external image URL through images.hive.blog.
  * Returns the URL unchanged if it's already proxied, a data/blob URL, or empty.
+ * GIFs always use the 0x0 (no-resize) path so animation is preserved — the
+ * proxy strips animation frames when resizing.
  */
 export function proxyImageUrl(url: string, maxWidth = 0): string {
   if (!url || typeof url !== 'string') return url
@@ -31,7 +39,7 @@ export function proxyImageUrl(url: string, maxWidth = 0): string {
   if (!trimmed) return trimmed
   if (isDataOrBlob(trimmed)) return trimmed
   if (isAlreadyProxied(trimmed)) return trimmed
-  const size = maxWidth > 0 ? `${maxWidth}x0` : '0x0'
+  const size = maxWidth > 0 && !isGif(trimmed) ? `${maxWidth}x0` : '0x0'
   return `${HIVE_IMAGE_PROXY_BASE}/${size}/${trimmed}`
 }
 
