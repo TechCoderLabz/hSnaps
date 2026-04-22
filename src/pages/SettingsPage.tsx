@@ -87,7 +87,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-8">
+    <div className="mx-auto max-w-lg space-y-6 px-4 py-2">
       <h1 className="text-xl font-bold text-[#f0f0f8]">{t('settings.title')}</h1>
 
       <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85 px-4 py-3">

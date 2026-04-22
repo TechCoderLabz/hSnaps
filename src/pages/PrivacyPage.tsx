@@ -1,21 +1,30 @@
 /**
  * Privacy Policy for hSnaps. Adapted from HiveFest Facts–style policy.
  */
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 
 export function PrivacyPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  // Go back to the route that brought us here; if the page was opened directly
+  // (no prior in-app history), fall back to the landing page.
+  const handleBack = () => {
+    if (location.key === 'default') navigate('/')
+    else navigate(-1)
+  }
   return (
     <div className="app-header-safe-area min-h-screen bg-[#212529] text-[#f0f0f8]">
       <div className="fixed inset-0 bg-gradient-to-br from-[#3a1118]/30 via-[#212529] to-[#2b3138] pointer-events-none" />
       <div className="relative mx-auto max-w-2xl px-4 py-12 sm:px-8 sm:py-16">
-        <Link
-          to="/"
+        <button
+          type="button"
+          onClick={handleBack}
           className="inline-flex items-center gap-2 text-sm text-[#9ca3b0] transition hover:text-[#e7e7f1]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to home
-        </Link>
+        </button>
 
         <h1 className="mt-8 text-3xl font-bold text-[#f0f0f8]">Privacy Policy</h1>
 

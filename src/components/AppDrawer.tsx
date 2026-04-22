@@ -2,7 +2,7 @@
  * App drawer: menu items (feed options on mobile, Search User, Bookmarks, Ignored, Settings, Login on mobile).
  * Bottom: branch, app version, refresh (web) or copy version (native).
  */
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Search,
   Bookmark,
@@ -44,9 +44,22 @@ interface AppDrawerProps {
 
 export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { feedType, setFeedType } = useMobileFeedStore()
   const isNative = isMobilePlatform()
   const { isAuthenticated, username, isApprover } = useAuthData()
+
+  // Home is active whenever a feed is showing (snaps, waves, threads, moments, ecency, etc.),
+  // which is anything rendered at the /dashboard index route.
+  const isHomeActive = location.pathname === '/dashboard'
+
+  const itemClasses = (active: boolean) =>
+    `flex w-full items-center gap-3 px-4 py-2.5 text-left ${
+      active ? 'bg-[#2f353d] text-[#e31337]' : 'text-[#f0f0f8] hover:bg-[#2f353d]'
+    }`
+  const iconClasses = (active: boolean) =>
+    `h-5 w-5 shrink-0 ${active ? 'text-[#e31337]' : 'text-[#9ca3b0]'}`
+  const isActive = (path: string) => location.pathname === path
 
   const handleNav = (path: string) => {
     navigate(path.startsWith('/') ? path : `/dashboard/${path}`)
@@ -106,13 +119,26 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
             <X className="h-5 w-5" />
           </button>
         </div>
+        {isMobileView && (
+          <div className="px-3 py-3 mx-auto">
+            <HiveLoginButton />
+          </div>
+        )}
 
         <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto py-2">
-          {isMobileView && (
-            <div className="px-3 pb-3 mx-auto">
-              <HiveLoginButton />
-            </div>
-          )}
+          <div className="pb-2">
+            <button
+              type="button"
+              onClick={() => handleNav('/dashboard')}
+              className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${isHomeActive ? 'bg-[#2f353d] text-[#e31337]' : 'text-[#f0f0f8] hover:bg-[#2f353d]'
+                }`}
+            >
+              <Home
+                className={`h-5 w-5 shrink-0 ${isHomeActive ? 'text-[#e31337]' : 'text-[#9ca3b0]'}`}
+              />
+              <span>Home</span>
+            </button>
+          </div>
 
           {isMobileView && (
             <div className="pb-2">
@@ -125,7 +151,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   type="button"
                   onClick={() => handleFeedChange(id)}
                   className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${
-                    feedType === id ? 'bg-[#2f353d] text-[#e31337]' : 'text-[#f0f0f8] hover:bg-[#2f353d]'
+                    isHomeActive && feedType === id
+                      ? 'bg-[#2f353d] text-[#e31337]'
+                      : 'text-[#f0f0f8] hover:bg-[#2f353d]'
                   }`}
                 >
                   <img
@@ -148,9 +176,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 <button
                   type="button"
                   onClick={() => handleNav('/dashboard/search-user')}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  className={itemClasses(isActive('/dashboard/search-user'))}
                 >
-                  <Search className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                  <Search className={iconClasses(isActive('/dashboard/search-user'))} />
                   <span>Search User</span>
                 </button>
               </li>
@@ -159,9 +187,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   <button
                     type="button"
                     onClick={() => handleNav(`/@${username}`)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                    className={itemClasses(isActive(`/@${username}`))}
                   >
-                    <User className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                    <User className={iconClasses(isActive(`/@${username}`))} />
                     <span>My Profile</span>
                   </button>
                 </li>
@@ -171,9 +199,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   <button
                     type="button"
                     onClick={() => handleNav('/dashboard/bookmarks')}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                    className={itemClasses(isActive('/dashboard/bookmarks'))}
                   >
-                    <Bookmark className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                    <Bookmark className={iconClasses(isActive('/dashboard/bookmarks'))} />
                     <span>Bookmarks</span>
                   </button>
                 </li>
@@ -183,9 +211,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   <button
                     type="button"
                     onClick={() => handleNav('/dashboard/ignored')}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                    className={itemClasses(isActive('/dashboard/ignored'))}
                   >
-                    <EyeOff className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                    <EyeOff className={iconClasses(isActive('/dashboard/ignored'))} />
                     <span>Ignored</span>
                   </button>
                 </li>
@@ -195,7 +223,7 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                   <button
                     type="button"
                     onClick={() => handleNav('/dashboard/admin')}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                    className={itemClasses(isActive('/dashboard/admin'))}
                   >
                     <ShieldAlert className="h-5 w-5 shrink-0 text-[#e31337]" />
                     <span>Admin Moderation</span>
@@ -206,9 +234,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 <button
                   type="button"
                   onClick={() => handleNav('/dashboard/settings')}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  className={itemClasses(isActive('/dashboard/settings'))}
                 >
-                  <Settings className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                  <Settings className={iconClasses(isActive('/dashboard/settings'))} />
                   <span>Settings</span>
                 </button>
               </li>
@@ -216,9 +244,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 <button
                   type="button"
                   onClick={() => handleNav('/privacy')}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  className={itemClasses(isActive('/privacy'))}
                 >
-                  <ShieldCheck className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                  <ShieldCheck className={iconClasses(isActive('/privacy'))} />
                   <span>Privacy Policy</span>
                 </button>
               </li>
@@ -226,9 +254,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 <button
                   type="button"
                   onClick={() => handleNav('/about-us')}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  className={itemClasses(isActive('/about-us'))}
                 >
-                  <Info className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                  <Info className={iconClasses(isActive('/about-us'))} />
                   <span>About Us</span>
                 </button>
               </li>
@@ -236,9 +264,9 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 <button
                   type="button"
                   onClick={() => handleNav('/')}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[#f0f0f8] hover:bg-[#2f353d]"
+                  className={itemClasses(isActive('/'))}
                 >
-                  <Home className="h-5 w-5 shrink-0 text-[#9ca3b0]" />
+                  <Home className={iconClasses(isActive('/'))} />
                   <span>Go to welcome page</span>
                 </button>
               </li>

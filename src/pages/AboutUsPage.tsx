@@ -1,7 +1,7 @@
 /**
  * About Us page: Vision, Mission, What We Believe, Our Approach, Apps, Why We Build, Open Source, Long Term Goal.
  */
-import { Link } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   Eye,
@@ -159,19 +159,28 @@ const BELIEFS: BeliefCardProps[] = [
 ]
 
 export function AboutUsPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  // Go back to the route that brought us here; if the page was opened directly
+  // (no prior in-app history), fall back to the landing page.
+  const handleBack = () => {
+    if (location.key === 'default') navigate('/')
+    else navigate(-1)
+  }
   return (
     <div className="min-h-screen bg-[#212529] text-[#f0f0f8]">
       <div className="fixed inset-0 bg-gradient-to-br from-[#3a1118]/45 via-[#212529] to-[#2b3138] pointer-events-none" />
       <div className="relative">
         {/* Header */}
         <header className="app-header-safe-area sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#3a424a] bg-[#212529] px-4">
-          <Link
-            to="/"
+          <button
+            type="button"
+            onClick={handleBack}
             className="flex items-center gap-2 rounded-lg p-2 text-[#9ca3b0] transition hover:bg-[#2f353d] hover:text-[#f0f0f8]"
             aria-label="Back to home"
           >
             <ArrowLeft className="h-5 w-5" />
-          </Link>
+          </button>
           <h1 className="text-lg font-semibold bg-gradient-to-r from-[#f0f0f8] via-[#e7e7f1] to-[#ff7a92] bg-clip-text text-transparent">
             About Us
           </h1>

@@ -82,12 +82,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: store.error,
   })
 
-  // Initialize encryption key so persisted auth data is decrypted on any page reload
+  // Initialize encryption key so persisted auth data is decrypted on any page reload.
+  // Mirrors HiveLoginButton's expression — the env key is passed straight through, matching what
+  // AuthButton does internally via setSecretKey.
   useEffect(() => {
-    const encryptionKey = import.meta.env.VITE_ENCRYPTION_KEY ?? import.meta.env.VITE_LOCAL_KEY ?? ''
-    const currentKey = useAuthStore.getState().secretKey
-    if (encryptionKey && currentKey !== encryptionKey) {
-      useAuthStore.getState().setSecretKey(encryptionKey)
+    const encryptionKey = import.meta.env.VITE_ENCRYPTION_KEY ?? import.meta.env.VITE_LOCAL_KEY
+    if (!encryptionKey) return
+    if (useAuthStore.getState().secretKey === encryptionKey) return
+
+    const hadStoredUsers =
+      !!localStorage.getItem('ha-logged-in-users') || !!localStorage.getItem('ha-logged-in-user')
+    useAuthStore.getState().setSecretKey(encryptionKey)
+
+    // If ciphertext was present but decrypt produced no users, the data was encrypted under a
+    // different key. Purge it so the next reload doesn't re-trigger the "Malformed UTF-8" log.
+    const after = useAuthStore.getState()
+    if (hadStoredUsers && !after.currentUser && after.loggedInUsers.length === 0) {
+      localStorage.removeItem('ha-logged-in-users')
+      localStorage.removeItem('ha-logged-in-user')
     }
   }, [])
 
