@@ -5,11 +5,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Play, X, ChevronLeft, ChevronRight, Music } from 'lucide-react'
+import { Play, X, ChevronLeft, ChevronRight, Music, ImageOff } from 'lucide-react'
 import type { NormalizedPost } from '../utils/types'
 import type { ParsedPostBody } from '../utils/postBody'
 import { parsePostBody, plainTextToSegments } from '../utils/postBody'
 import { openLink } from '../utils/openLink'
+import { isMobilePlatform } from '../utils/platform-detection'
 import { parseHiveFrontendUrl } from 'hive-react-kit'
 import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
@@ -322,18 +323,30 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
 
         <div className="flex flex-1 flex-col items-center justify-center p-3 sm:p-4">
           {attachment.kind === 'youtube' && (
-            <div
-              className="w-full overflow-hidden rounded-lg"
-              style={{ aspectRatio: '16/9' }}
-              onClick={stop}
-            >
-              <iframe
-                src={`https://www.youtube.com/embed/${attachment.id}?autoplay=1&rel=0`}
-                title="YouTube video"
-                className="h-full w-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+            <div className="w-full" onClick={stop}>
+              <div
+                className="w-full overflow-hidden rounded-lg"
+                style={{ aspectRatio: '16/9' }}
+              >
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${attachment.id}?autoplay=1&rel=0&playsinline=1`}
+                  title="YouTube video"
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void openLink(`https://www.youtube.com/watch?v=${attachment.id}`)
+                }}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-medium text-white/90 transition hover:bg-white/20"
+              >
+                <Play className="h-4 w-4 fill-current" />
+                Watch on YouTube
+              </button>
             </div>
           )}
 
@@ -398,41 +411,58 @@ function ImageThumbnail({
   const thumbUrl = getHiveProxyThumbnailUrl(url)
   const [src, setSrc] = useState(thumbUrl)
   const [loaded, setLoaded] = useState(false)
+  const [errored, setErrored] = useState(false)
 
   useEffect(() => {
     setSrc(thumbUrl)
     setLoaded(false)
+    setErrored(false)
   }, [thumbUrl])
 
+  // Fallback chain: proxied thumb -> raw url -> error tile. This matters for
+  // signed `images.hive.blog/p/<hash>` URLs the proxy rejects with 413.
   const handleError = () => {
     if (src !== url) {
       setSrc(url)
     } else {
+      setErrored(true)
       setLoaded(true)
     }
+  }
+
+  const openOriginal = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    void openLink(url)
   }
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={errored ? openOriginal : onClick}
       className="relative flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#1a1e22]"
-      aria-label="View image"
+      aria-label={errored ? 'Open image in browser' : 'View image'}
     >
       {!loaded && (
         <div className="absolute inset-0 z-[5] flex items-center justify-center bg-[#1a1e22]">
           <span className="inline-block h-8 w-8 animate-spin rounded-full border-3 border-[#e31337] border-t-transparent" />
         </div>
       )}
-      <img
-        src={src}
-        alt=""
-        className="max-h-full max-w-full object-contain"
-        loading="lazy"
-        draggable={false}
-        onLoad={() => setLoaded(true)}
-        onError={handleError}
-      />
+      {errored ? (
+        <div className="flex flex-col items-center gap-2 px-4 text-center text-[#8a9198]">
+          <ImageOff className="h-8 w-8" />
+          <span className="text-xs">Image unavailable — tap to open</span>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt=""
+          className="max-h-full max-w-full object-contain"
+          loading="lazy"
+          draggable={false}
+          onLoad={() => setLoaded(true)}
+          onError={handleError}
+        />
+      )}
     </button>
   )
 }
@@ -504,6 +534,12 @@ function AttachmentStrip({
       const imgIndex = imageUrls.indexOf(a.url)
       setLightboxIndex(imgIndex >= 0 ? imgIndex : 0)
       setLightboxOpen(true)
+    } else if (a.kind === 'youtube' && isMobilePlatform()) {
+      // YouTube iframe embedding is flaky inside Capacitor WebView (referrer
+      // checks, embed-domain allowlists). Bypass the in-app popup and let
+      // the system handle it — iOS gets SFSafariViewController and Android
+      // hands off to Chrome / YouTube app, both of which play reliably.
+      void openLink(`https://www.youtube.com/watch?v=${a.id}`)
     } else {
       setPopupAttachment(a)
     }
