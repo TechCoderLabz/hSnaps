@@ -23,8 +23,15 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAioha } from '@aioha/react-provider'
+import { useProgrammaticAuth } from 'hive-authentication'
+import type { HiveAuthResult } from 'hive-authentication'
 import { checkUsername, createAccount } from '../services/accountService'
 import type { CreateAccountResult } from '../services/accountService'
+import { useAppAuthStore } from '../stores/authStore'
+
+const HD_API_SERVER =
+  import.meta.env.VITE_HIVE_API_SERVER || 'https://hreplier-api.sagarkothari88.one'
 
 /** Generate a strong random master password: 32 random base58 chars (matches peakd format). */
 function generatePassword(): string {
@@ -40,6 +47,9 @@ type Step = 'username' | 'password' | 'confirm' | 'success'
 
 export function SignUpPage() {
   const navigate = useNavigate()
+  const { aioha } = useAioha()
+  const { loginWithPrivateKey } = useProgrammaticAuth(aioha)
+  const setFromServerResponse = useAppAuthStore((s) => s.setFromServerResponse)
 
   // --- state ---
   const [step, setStep] = useState<Step>('username')
@@ -57,6 +67,7 @@ export function SignUpPage() {
   const [createError, setCreateError] = useState('')
 
   const [result, setResult] = useState<CreateAccountResult | null>(null)
+  const [loggingIn, setLoggingIn] = useState(false)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
@@ -136,6 +147,63 @@ export function SignUpPage() {
       toast.success(`${label} key copied`)
     } catch {
       toast.error('Failed to copy')
+    }
+  }
+
+  // Server validation callback used by programmatic login. Mirrors HiveLoginButton's
+  // /login POST so the app session is created the same way as a manual login.
+  const buildServerCallback = useCallback(
+    () => async (hiveResult: HiveAuthResult) => {
+      const objectForAuth = {
+        signed_message: { type: 'login', app: 'thehivemobileapp' },
+        authors: [hiveResult.username],
+        timestamp: new Date().toISOString(),
+        signatures: [hiveResult.challenge],
+      }
+      const ecencyToken = btoa(JSON.stringify(objectForAuth))
+
+      const response = await fetch(`${HD_API_SERVER}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challenge: hiveResult.challenge,
+          proof: hiveResult.proof,
+          pubkey: hiveResult.publicKey,
+          username: hiveResult.username,
+        }),
+      })
+      if (!response.ok) throw new Error('Server authentication failed')
+
+      const data = await response.json()
+      data.provider = hiveResult.provider
+      data.ecencyToken = ecencyToken
+      data.challenge = hiveResult.challenge
+      data.proof = hiveResult.proof
+      data.pubkey = hiveResult.publicKey
+      data.username = hiveResult.username
+      if (hiveResult.privatePostingKey) {
+        ;(data as Record<string, unknown>).privatePostingKey = hiveResult.privatePostingKey
+      }
+
+      const serverResponse = JSON.stringify(data)
+      setFromServerResponse(serverResponse)
+      return serverResponse
+    },
+    [setFromServerResponse],
+  )
+
+  const handleGoToApp = async () => {
+    if (!result) return
+    setLoggingIn(true)
+    try {
+      await loginWithPrivateKey(result.username, result.keys.posting, buildServerCallback())
+      navigate('/dashboard')
+    } catch (err) {
+      console.error('Programmatic login failed:', err)
+      toast.error('Auto-login failed. Please log in manually.')
+      navigate('/dashboard')
+    } finally {
+      setLoggingIn(false)
     }
   }
 
@@ -487,11 +555,21 @@ export function SignUpPage() {
 
             <button
               type="button"
-              onClick={() => navigate('/dashboard')}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#e31337] px-6 py-3 font-semibold text-white shadow-lg shadow-[#e31337]/25 transition hover:bg-[#c51231]"
+              onClick={handleGoToApp}
+              disabled={loggingIn}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#e31337] px-6 py-3 font-semibold text-white shadow-lg shadow-[#e31337]/25 transition hover:bg-[#c51231] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Go to App
-              <ArrowRight className="h-4 w-4" />
+              {loggingIn ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Logging you in…
+                </>
+              ) : (
+                <>
+                  Go to App
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </button>
           </div>
         )}
