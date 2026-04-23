@@ -8,6 +8,7 @@ import { useWavesStore } from '../stores/wavesStore'
 import { useMomentStore } from '../stores/momentStore'
 import { FEED_LABELS, FEED_AVATARS } from '../constants/feeds'
 import { FeedComposer } from './FeedComposer'
+import { useBackDismiss } from '../stores/backDismissStore'
 
 function useObserver(): string {
   const { username } = useAuthData()
@@ -77,6 +78,9 @@ export function ComposeFab({
       })
     return () => { abortController.abort('avoid duplicate requests') }
   }, [open, observer])
+
+  // Android hardware back button: close the sheet instead of navigating away.
+  useBackDismiss(open, () => setOpen(false))
 
   if (!isAuthenticated) return null
 

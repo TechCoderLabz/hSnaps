@@ -507,7 +507,13 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           >
             <button
               type="button"
-              onClick={() => setShowReplyComposer(true)}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  toast.info('Please log in to reply')
+                  return
+                }
+                setShowReplyComposer(true)
+              }}
               className={actionBtnClass}
               aria-label={hasCommented ? "Reply to post (you've already commented)" : 'Reply to post'}
             >

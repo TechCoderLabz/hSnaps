@@ -10,6 +10,7 @@ import type { PollData, RewardOption } from 'hive-react-kit'
 import { useAioha } from '@aioha/react-provider'
 import { useAuthStore as useHiveAuthStore } from 'hive-authentication'
 import { useAuthData } from '../stores/authStore'
+import { useComposerSettingsStore } from '../stores/composerSettingsStore'
 import { useHiveOperations } from '../hooks/useHiveOperations'
 import type { FeedType } from '../utils/types'
 import { FEED_CHAR_LIMITS } from '../utils/types'
@@ -173,7 +174,10 @@ export function FeedComposer({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pollData, setPollData] = useState<PollData | null>(null)
   const [tags, setTags] = useState<string[]>([])
-  const [reward, setReward] = useState<RewardOption>('default')
+  // Initialize reward from the user's saved default in Settings. Changing the reward
+  // on a single composer is local — it does not overwrite the saved default.
+  const savedDefaultReward = useComposerSettingsStore((s) => s.defaultReward)
+  const [reward, setReward] = useState<RewardOption>(savedDefaultReward)
   const [voteEnabled, setVoteEnabled] = useState(false)
   const [votePercent, setVotePercent] = useState(100)
   const provider = (hiveAuthUser?.provider || '').toLowerCase()

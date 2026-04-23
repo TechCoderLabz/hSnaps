@@ -2,9 +2,10 @@
  * Pop-up that wraps FeedComposer in reply mode. Shows the parent author's
  * avatar, username, and permlink in the header (no current-user info).
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FeedComposer } from '../FeedComposer'
 import type { FeedType } from '../../utils/types'
+import { useBackDismiss } from '../../stores/backDismissStore'
 
 interface ReplyComposerModalProps {
   isOpen: boolean
@@ -38,6 +39,7 @@ export function ReplyComposerModal({
   parentTags,
 }: ReplyComposerModalProps) {
   const [mounted, setMounted] = useState(false)
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(isOpen)
@@ -53,6 +55,25 @@ export function ReplyComposerModal({
     }
   }, [isOpen, onClose])
 
+  // Android hardware back button: close the sheet instead of navigating away.
+  useBackDismiss(isOpen, onClose)
+
+  // When the on-screen keyboard opens, the browser's auto-scroll-into-view only
+  // works if the focused element lives in a scrollable ancestor. Explicitly scroll
+  // the focused input/textarea into the visible area of our scrollable body.
+  const handleFocusCapture = (e: React.FocusEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (!target) return
+    const tag = target.tagName
+    if (tag !== 'TEXTAREA' && tag !== 'INPUT' && !target.isContentEditable) return
+    // Defer so the virtual keyboard has time to reserve its area on iOS/Android.
+    setTimeout(() => {
+      try {
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      } catch { /* ignore */ }
+    }, 250)
+  }
+
   if (!mounted || !isOpen) return null
 
   const avatarUrl = parentAvatarUrl ?? `https://images.hive.blog/u/${parentAuthor}/avatar`
@@ -65,8 +86,13 @@ export function ReplyComposerModal({
         aria-hidden
       />
 
-      <div className="relative z-10 w-full max-w-2xl animate-[slideUp_200ms_ease-out] sm:animate-[scaleIn_200ms_ease-out] rounded-2xl border border-[#3a424a] bg-[#262b30] overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#262b30]">
+      <div
+        ref={bodyRef}
+        className="relative z-10 w-full max-w-2xl max-h-[100dvh] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain animate-[slideUp_200ms_ease-out] sm:animate-[scaleIn_200ms_ease-out] rounded-t-2xl sm:rounded-2xl border border-[#3a424a] bg-[#262b30]"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+        onFocusCapture={handleFocusCapture}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 bg-[#262b30] border-b border-[#3a424a]/50">
           <div className="flex min-w-0 items-center gap-3">
             <img
               src={avatarUrl}

@@ -4,14 +4,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, ExternalLink, FileText, Globe, Server, Shield, Trash2 } from 'lucide-react'
+import { ChevronRight, Coins, ExternalLink, FileText, Globe, Server, Shield, Trash2 } from 'lucide-react'
 import { useAuthStore } from 'hive-authentication'
 import { toast } from 'sonner'
+import { REWARD_OPTIONS, REWARD_OPTION_LABELS, type RewardOption } from 'hive-react-kit'
 import { APP_VERSION } from '../config/appVersion'
 import { SUPPORT_DISCORD_URL, VOTE_WITNESS_URL, SUPPORTERS } from '../constants/support'
 import { useAuthData, useAppAuthStore } from '../stores/authStore'
 import { useHiveNodeStore, HIVE_API_NODE_OPTIONS } from '../stores/hiveNodeStore'
 import type { HiveApiNode } from '../stores/hiveNodeStore'
+import { useComposerSettingsStore } from '../stores/composerSettingsStore'
 import { isIOS } from '../utils/platform-detection'
 import { SUPPORTED_LANGUAGES, setLanguage } from '../i18n'
 
@@ -25,6 +27,8 @@ export function SettingsPage() {
   const clearAuth = useAppAuthStore((s) => s.clearAuth)
   const hiveApiNode = useHiveNodeStore((s) => s.hiveApiNode)
   const setHiveApiNode = useHiveNodeStore((s) => s.setHiveApiNode)
+  const defaultReward = useComposerSettingsStore((s) => s.defaultReward)
+  const setDefaultReward = useComposerSettingsStore((s) => s.setDefaultReward)
   const navigate = useNavigate()
 
   const [currentLang, setCurrentLang] = useState<string>(
@@ -139,6 +143,32 @@ export function SettingsPage() {
             {HIVE_API_NODE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
+
+      {/* Composer Defaults — applies to every Post Composer in the app */}
+      <section className="rounded-xl border border-[#3a424a] bg-[#262b30]/85 px-4 py-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Coins className="h-5 w-5 shrink-0 text-[#e31337]" />
+            <div>
+              <h3 className="font-medium text-[#f0f0f8]">Default reward routing</h3>
+              <p className="text-xs text-[#9ca3b0]">
+                Pre-selected in every Post Composer. You can still change it per-post.
+              </p>
+            </div>
+          </div>
+          <select
+            value={defaultReward}
+            onChange={(e) => setDefaultReward(e.target.value as RewardOption)}
+            className="w-full rounded-lg border border-[#3a424a] bg-[#1a1e22] px-3 py-2 text-sm text-white focus:border-transparent focus:ring-2 focus:ring-[#e31337] outline-none"
+          >
+            {REWARD_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {REWARD_OPTION_LABELS[opt]}
               </option>
             ))}
           </select>
