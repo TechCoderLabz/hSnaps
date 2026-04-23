@@ -45,6 +45,15 @@ export function EulaGate({ children }: { children: React.ReactNode }) {
             By using hSnaps ("the App"), you agree to be bound by this End-User License Agreement.
           </p>
 
+          <div className="mt-3 rounded-lg border border-[#e31337]/60 bg-[#e31337]/10 p-3">
+            <p className="font-bold uppercase tracking-wide text-[#ff7a92]">
+              Zero tolerance policy
+            </p>
+            <p className="mt-1 text-[#f0f0f8]">
+              hSnaps has <span className="font-semibold">no tolerance for objectionable content or abusive users</span>. Posting, sharing, or promoting such content — or harassing, threatening, or abusing other users — will result in content removal and account restrictions, and may be reported to the relevant authorities.
+            </p>
+          </div>
+
           <p className="mt-3 font-semibold text-[#e7e7f1]">User-generated content</p>
           <p className="mt-1">
             hSnaps displays content posted by third-party users on the Hive blockchain. We do not control, endorse, or guarantee the accuracy, integrity, or quality of any user-generated content. You acknowledge that you may be exposed to content that is offensive, indecent, or objectionable, and you use the App at your own risk.
@@ -53,14 +62,24 @@ export function EulaGate({ children }: { children: React.ReactNode }) {
             You are solely responsible for any content you post through the App.
           </p>
 
-          <p className="mt-3 font-semibold text-[#e7e7f1]">Prohibited content</p>
+          <p className="mt-3 font-semibold text-[#e7e7f1]">Prohibited content and behavior</p>
           <p className="mt-1">
-            You agree not to use the App to post or share content that is illegal, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, or otherwise objectionable. Content involving child sexual abuse or exploitation (CSAE) is strictly prohibited.
+            You agree not to use the App to post, share, or promote content that is illegal, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, hateful, or otherwise objectionable. You also agree not to stalk, harass, impersonate, or otherwise abuse other users. Content involving child sexual abuse or exploitation (CSAE) is strictly prohibited and will be reported to the relevant authorities.
           </p>
 
-          <p className="mt-3 font-semibold text-[#e7e7f1]">Content reporting</p>
+          <p className="mt-3 font-semibold text-[#e7e7f1]">Flagging objectionable content</p>
           <p className="mt-1">
-            If you encounter inappropriate content, please use the in-app flagging feature to report it.
+            Every post and comment has a "Report" option in its menu. Use it to flag content you believe violates this agreement. Reports are reviewed and appropriate action — including content removal — is taken within 24 hours.
+          </p>
+
+          <p className="mt-3 font-semibold text-[#e7e7f1]">Blocking abusive users</p>
+          <p className="mt-1">
+            You can mute or block any user directly from their profile or from the menu on any of their posts or comments. Blocked users' content will no longer appear in your feed.
+          </p>
+
+          <p className="mt-3 font-semibold text-[#e7e7f1]">Enforcement</p>
+          <p className="mt-1">
+            We reserve the right to remove content and restrict or terminate accounts that violate this agreement, with or without prior notice.
           </p>
 
           <p className="mt-3 font-semibold text-[#e7e7f1]">Disclaimer</p>

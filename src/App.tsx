@@ -9,7 +9,9 @@ import { useBlacklistStore } from './stores/blacklistStore'
 import { useAbusiveUsersStore } from './stores/abusiveUsersStore'
 
 void useBlacklistStore.getState().ensureFresh()
-void useAbusiveUsersStore.getState().ensureFresh()
+// Always force-refresh the admin abusive list on app load — admin add/remove
+// should propagate immediately, not after the 24h TTL.
+void useAbusiveUsersStore.getState().refresh()
 
 // Single Aioha instance configured similarly to the reference app
 const aioha = initAioha({

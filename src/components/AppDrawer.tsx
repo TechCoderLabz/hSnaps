@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   Info,
   User,
+  FileText,
 } from 'lucide-react'
 import { useMobileFeedStore } from '../stores/mobileFeedStore'
 import { isMobilePlatform } from '../utils/platform-detection'
@@ -248,6 +249,16 @@ export function AppDrawer({ open, onClose, isMobileView }: AppDrawerProps) {
                 >
                   <ShieldCheck className={iconClasses(isActive('/privacy'))} />
                   <span>Privacy Policy</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNav('/eula')}
+                  className={itemClasses(isActive('/eula'))}
+                >
+                  <FileText className={iconClasses(isActive('/eula'))} />
+                  <span>EULA</span>
                 </button>
               </li>
               <li>

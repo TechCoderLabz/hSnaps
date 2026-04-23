@@ -35,6 +35,15 @@ export function EulaPage() {
             </p>
           </section>
 
+          <section className="rounded-xl border border-[#e31337]/60 bg-[#e31337]/10 p-5">
+            <h2 className="text-lg font-bold uppercase tracking-wide text-[#ff7a92]">
+              Zero tolerance policy
+            </h2>
+            <p className="mt-2 leading-relaxed text-[#f0f0f8]">
+              hSnaps has <span className="font-semibold">no tolerance for objectionable content or abusive users</span>. Posting, sharing, or promoting such content — or harassing, threatening, or abusing other users in any way — will result in content removal and account restrictions, and may be reported to the relevant authorities. By using the App, you affirm that you understand and accept this policy.
+            </p>
+          </section>
+
           <section>
             <h2 className="text-lg font-semibold text-[#e7e7f1]">User-generated content</h2>
             <p className="mt-2 leading-relaxed">
@@ -46,16 +55,30 @@ export function EulaPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-[#e7e7f1]">Prohibited content</h2>
+            <h2 className="text-lg font-semibold text-[#e7e7f1]">Prohibited content and behavior</h2>
             <p className="mt-2 leading-relaxed">
-              You agree not to use the App to post or share content that is illegal, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, or otherwise objectionable. Content involving child sexual abuse or exploitation (CSAE) is strictly prohibited and will be reported to the relevant authorities.
+              You agree not to use the App to post, share, or promote content that is illegal, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, hateful, or otherwise objectionable. You also agree not to stalk, harass, impersonate, or otherwise abuse other users. Content involving child sexual abuse or exploitation (CSAE) is strictly prohibited and will be reported to the relevant authorities.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-[#e7e7f1]">Content reporting</h2>
+            <h2 className="text-lg font-semibold text-[#e7e7f1]">Flagging objectionable content</h2>
             <p className="mt-2 leading-relaxed">
-              If you encounter content that violates this agreement or is otherwise inappropriate, please use the in-app flagging feature to report it. We will review and take appropriate action, which may include removing content and restricting accounts.
+              Every post and comment includes a "Report" option in its menu. If you encounter content that violates this agreement or is otherwise inappropriate, please flag it. Reports are reviewed and appropriate action — including content removal — is taken within 24 hours.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-[#e7e7f1]">Blocking abusive users</h2>
+            <p className="mt-2 leading-relaxed">
+              You can mute or block any user directly from their profile, or from the menu on any of their posts or comments. Once blocked, that user's posts and comments will no longer appear in your feed or replies.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-[#e7e7f1]">Enforcement</h2>
+            <p className="mt-2 leading-relaxed">
+              We reserve the right to remove content and to restrict or terminate accounts that violate this agreement, with or without prior notice. Serious or repeat violations — including any CSAE content — may be reported to the relevant authorities.
             </p>
           </section>
 
