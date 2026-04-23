@@ -23,7 +23,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { isMobilePlatform, isIOS } from '../utils/platform-detection'
+import { isMobilePlatform, isIOS, getShareBaseUrl } from '../utils/platform-detection'
 import {
   APP_STORE_URL,
   PLAY_STORE_URL,
@@ -245,7 +245,9 @@ export function LandingPage() {
                   title: 'Inspired by @peakd\'s Snaps',
                   description: 'Great Dev @asgarth\'s Peakd-Snaps',
                   avatar: 'https://images.hive.blog/u/asgarth/avatar',
-                  link: 'https://peakd.com/@asgarth',
+                  // Route through our own share URL so landing-page visitors
+                  // stay inside hSnaps instead of being punted to peakd.
+                  link: `${getShareBaseUrl()}/#/@asgarth`,
                   buttonText: 'View',
                 },
               ]

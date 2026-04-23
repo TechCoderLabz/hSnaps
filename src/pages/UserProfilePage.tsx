@@ -274,6 +274,22 @@ export function UserProfilePage() {
               console.error('Share failed')
             }
           }}
+          onSharePost={async (author, permlink) => {
+            // Posts/polls listed in the profile share via the hsnaps hash route,
+            // not peakd. Matches the behaviour in PostCommentsPage / PostCard.
+            const url = `${getShareBaseUrl()}/#/@${author}/${permlink}`
+            try {
+              if (!isMobilePlatform() && navigator.share) {
+                await navigator.share({ url, title: `Post by @${author}` })
+                toast.success('Link shared')
+              } else {
+                await navigator.clipboard.writeText(url)
+                toast.success('Link copied')
+              }
+            } catch {
+              console.error('Share failed')
+            }
+          }}
           onFollow={async (target) => {
             try {
               await follow(target)

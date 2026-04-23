@@ -290,9 +290,18 @@ export interface FeedPageCursor {
 
 /**
  * Fetch one page of feed posts.
- * Iterates through containers one by one. Only fetches a new batch of containers
- * from get_account_posts when all containers in the current batch are exhausted.
+ *
+ * Strategy: aggregate posts across consecutive containers (today, yesterday, …)
+ * until we have at least TARGET_PAGE_SIZE items or we run out of containers.
+ * This avoids the jarring "only 2 snaps showing" when today's container is
+ * lightly populated — the previous day(s) fill the page up to ~50 items in
+ * one pass. A hard safety cap on containers-per-page prevents pathologically
+ * empty days from blowing up the number of API calls.
  */
+const TARGET_PAGE_SIZE = 50
+const MAX_CONTAINERS_PER_PAGE = 10
+const CONTAINER_BATCH_LIMIT = 20
+
 export async function fetchFeedPage(
   feedType: FeedType,
   _page: number,
@@ -300,50 +309,135 @@ export async function fetchFeedPage(
   cursor: FeedPageCursor | null = null,
   signal?: AbortSignal
 ): Promise<{ posts: NormalizedPost[]; hasMore: boolean; nextCursor: FeedPageCursor | null }> {
-  const limit = 20
   const account = CONTAINER_ACCOUNTS[feedType]
 
   let containers = cursor?.containers ?? []
   let containerIndex = cursor?.containerIndex ?? 0
   let hasMoreBatches = cursor?.hasMoreBatches ?? true
 
-  // If we have no containers or we've exhausted the current batch, fetch a new batch
-  if (containers.length === 0 || containerIndex >= containers.length) {
-    // Use the last container from the previous batch as the pagination cursor
-    const lastContainer = containers.length > 0 ? containers[containers.length - 1] : null
-    const rawContainers = await getAccountPosts(
-      account,
-      limit,
-      lastContainer?.author ?? null,
-      lastContainer?.permlink ?? null,
-      observer,
-      signal
-    )
-    if (rawContainers.length === 0) {
-      return { posts: [], hasMore: false, nextCursor: null }
+  const collected: NormalizedPost[] = []
+  let containersProcessed = 0
+
+  while (
+    collected.length < TARGET_PAGE_SIZE &&
+    containersProcessed < MAX_CONTAINERS_PER_PAGE
+  ) {
+    if (signal?.aborted) break
+
+    // Refill the batch of containers when exhausted.
+    if (containers.length === 0 || containerIndex >= containers.length) {
+      if (!hasMoreBatches) break
+      const lastContainer = containers.length > 0 ? containers[containers.length - 1] : null
+      const rawContainers = await getAccountPosts(
+        account,
+        CONTAINER_BATCH_LIMIT,
+        lastContainer?.author ?? null,
+        lastContainer?.permlink ?? null,
+        observer,
+        signal
+      )
+      if (rawContainers.length === 0) {
+        hasMoreBatches = false
+        break
+      }
+      containers = rawContainers.map((c) => ({ author: c.author, permlink: c.permlink }))
+      containerIndex = 0
+      hasMoreBatches = rawContainers.length >= CONTAINER_BATCH_LIMIT
     }
-    containers = rawContainers.map((c) => ({ author: c.author, permlink: c.permlink }))
-    containerIndex = 0
-    hasMoreBatches = rawContainers.length >= limit
+
+    const container = containers[containerIndex]
+    const discussion = await getDiscussion(container.author, container.permlink, observer, signal)
+    collected.push(...discussionRepliesToPosts(discussion, container.author, container.permlink))
+    containerIndex += 1
+    containersProcessed += 1
   }
 
-  // Process the current container
-  const container = containers[containerIndex]
-  const discussion = await getDiscussion(container.author, container.permlink, observer, signal)
-  const posts = discussionRepliesToPosts(discussion, container.author, container.permlink)
-
-  // Advance to the next container
-  const nextIndex = containerIndex + 1
-  const hasMore = nextIndex < containers.length || hasMoreBatches
-
+  const hasMore = containerIndex < containers.length || hasMoreBatches
   const nextCursor: FeedPageCursor | null = hasMore
-    ? { containers, containerIndex: nextIndex, hasMoreBatches }
+    ? { containers, containerIndex, hasMoreBatches }
     : null
 
-  return {
-    posts,
-    hasMore,
-    nextCursor,
+  return { posts: collected, hasMore, nextCursor }
+}
+
+// ─── "My Feed" — direct fetch via hreplier, client-paginated ─────────────
+
+/**
+ * Fetches the current user's own snaps/threads/waves/moments directly from
+ * the hreplier endpoint keyed by `?author=<me>&parent=<container>`. The
+ * endpoint returns the full id/author/permlink reference list in one shot;
+ * we cache that list per `(feedType, author)` and slice client-side so the
+ * UI can paginate at 10-per-page without the incremental container-by-
+ * container load-more dance.
+ *
+ *   fetchMyFeedPosts(..., offset=0)  → first 10 posts
+ *   fetchMyFeedPosts(..., offset=10) → next 10 posts
+ *   `hasMore` flips to false once the cached ref list is exhausted.
+ *
+ * Only the current slice is materialised via bridge.get_post, so each page
+ * tap stays snappy.
+ */
+const HREPLIER_SNAPS_URL = 'https://hreplier-api.sagarkothari88.one/snaps'
+/** Page size for the My Feed scroll-end load. */
+export const MY_FEED_PAGE_SIZE = 10
+/** In-memory cache of ref lists keyed by `${feedType}|${author}`. */
+const myFeedRefsCache = new Map<string, Array<{ author: string; permlink: string }>>()
+
+export function invalidateMyFeedCache(feedType?: FeedType, author?: string) {
+  if (!feedType || !author) { myFeedRefsCache.clear(); return }
+  myFeedRefsCache.delete(`${feedType}|${author}`)
+}
+
+async function getMyFeedRefs(
+  feedType: FeedType,
+  author: string,
+  signal?: AbortSignal,
+): Promise<Array<{ author: string; permlink: string }>> {
+  const cacheKey = `${feedType}|${author}`
+  const cached = myFeedRefsCache.get(cacheKey)
+  if (cached) return cached
+
+  const parent = CONTAINER_ACCOUNTS[feedType]
+  const url = `${HREPLIER_SNAPS_URL}?author=${encodeURIComponent(author)}&parent=${encodeURIComponent(parent)}`
+  const resp = await fetch(url, { signal, headers: { Accept: 'application/json' } })
+  if (!resp.ok) throw new Error(`hreplier snaps API error: ${resp.status}`)
+  const raw = await resp.json()
+  const refs = (Array.isArray(raw) ? raw : []) as Array<{ author: string; permlink: string }>
+  if (signal?.aborted) throw new Error('aborted')
+  myFeedRefsCache.set(cacheKey, refs)
+  return refs
+}
+
+export async function fetchMyFeedPosts(
+  feedType: FeedType,
+  author: string,
+  offset: number = 0,
+  pageSize: number = MY_FEED_PAGE_SIZE,
+  observer: string = '',
+  signal?: AbortSignal,
+): Promise<{ posts: NormalizedPost[]; hasMore: boolean; nextOffset: number }> {
+  const refs = await getMyFeedRefs(feedType, author, signal)
+  if (refs.length === 0 || offset >= refs.length) {
+    return { posts: [], hasMore: false, nextOffset: offset }
   }
+
+  const slice = refs.slice(offset, offset + pageSize)
+  const posts: NormalizedPost[] = []
+  const BATCH = 5
+  for (let i = 0; i < slice.length; i += BATCH) {
+    if (signal?.aborted) break
+    const chunk = slice.slice(i, i + BATCH)
+    const results = await Promise.all(
+      chunk.map((r) => getPost(r.author, r.permlink, observer, signal).catch(() => null)),
+    )
+    for (const p of results) {
+      if (p) posts.push(normalizeBridgePost(p))
+    }
+  }
+  posts.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
+
+  const nextOffset = offset + slice.length
+  const hasMore = nextOffset < refs.length
+  return { posts, hasMore, nextOffset }
 }
 

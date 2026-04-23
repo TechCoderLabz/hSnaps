@@ -32,6 +32,11 @@ export function SnapsFeed() {
   const useGrid = isDesktop && viewMode === 'grid'
 
   useEffect(() => {
+    // Skip refetch on remount when the store already has data. Otherwise the
+    // Capacitor WebView remounting the screen (background/foreground, post
+    // detail → back, orientation change) resets pagination to page 1 and the
+    // user loses their position. Use the explicit Refresh button for a reload.
+    if (useSnapsStore.getState().posts.length > 0) return
     const abortController = new AbortController()
     fetchFeed(abortController.signal)
     return () => { abortController.abort('avoid duplicate requests') }

@@ -10,6 +10,7 @@ import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useFeedFilterStore } from '../stores/feedFilterStore'
 import { useFollowingStore } from '../stores/followingStore'
 import { useAuthData } from '../stores/authStore'
+import { useMyFeedDirect } from './useMyFeedDirect'
 import type { NormalizedPost } from '../utils/types'
 
 export type UnifiedFeedType = 'snaps' | 'threads' | 'waves' | 'moments'
@@ -65,6 +66,11 @@ export function useFeedByType(feedType: UnifiedFeedType) {
   const isFollowing = useFollowingStore((s) => s.isFollowing)
   const username = useAuthData().username ?? ''
 
+  // "My Feed" pulls from hreplier directly — one API round-trip instead of
+  // paginating through the container feed just to filter by one author.
+  // The hook is a no-op when the filter isn't selected.
+  const myFeedDirect = useMyFeedDirect(feedType, username, feedFilter === 'my_feed')
+
   let filteredPosts = state.posts.filter(
     (p) => !isBlacklisted(blacklist, p.author) && !isAbusive(abusive, p.author) && !isIgnored(p.author)
   )
@@ -88,10 +94,11 @@ export function useFeedByType(feedType: UnifiedFeedType) {
       filteredPosts = filteredPosts.filter((p) => isFollowing(p.author))
       break
     case 'my_feed':
-      if (username) {
-        const lower = username.toLowerCase()
-        filteredPosts = filteredPosts.filter((p) => p.author.toLowerCase() === lower)
-      }
+      // Posts come from the direct fetcher; still apply moderation filters so
+      // self-blacklisted / ignored accounts respect those lists.
+      filteredPosts = myFeedDirect.posts.filter(
+        (p) => !isBlacklisted(blacklist, p.author) && !isAbusive(abusive, p.author) && !isIgnored(p.author),
+      )
       break
     case 'newest':
     default:
@@ -109,20 +116,18 @@ export function useFeedByType(feedType: UnifiedFeedType) {
     return () => { abortController.abort('avoid duplicate requests') }
   }, [feedType])
 
-  // Auto-load more containers for "My Feed" until we cover the last 15 days (snaps only)
-  useEffect(() => {
-    if (feedType !== 'snaps') return
-    if (feedFilter !== 'my_feed' || !username) return
-    if (state.loading || !state.hasMore) return
-
-    const fifteenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-    if (state.posts.length > 0) {
-      const oldestTime = Math.min(...state.posts.map((p) => new Date(p.created).getTime()))
-      if (oldestTime < fifteenDaysAgo) return
+  // My Feed uses its own direct fetcher — surface its loading / error /
+  // hasMore so the feed's scroll-end trigger can keep paging at 10/page.
+  if (feedFilter === 'my_feed') {
+    return {
+      posts: filteredPosts,
+      loading: myFeedDirect.loading,
+      error: myFeedDirect.error,
+      hasMore: myFeedDirect.hasMore,
+      loadMore: myFeedDirect.loadMore,
+      allPosts: state.posts,
     }
-
-    state.loadMore()
-  }, [feedType, feedFilter, username, state.loading, state.hasMore, state.posts.length])
+  }
 
   return {
     ...state,

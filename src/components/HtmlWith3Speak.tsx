@@ -6,8 +6,10 @@ import { useCallback, useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
+import { parseHiveFrontendUrl } from 'hive-react-kit'
 import { parse3SpeakUrl, htmlEnsure3speakLinks } from '../utils/3speak'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
+import { YoutubeInlineEmbed, parseYoutubeId } from './YoutubeInlineEmbed'
 
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A') {
@@ -38,9 +40,26 @@ export function HtmlWith3Speak({ html, className = '' }: HtmlWith3SpeakProps) {
       const anchor = (e.target as HTMLElement).closest('a')
       if (!anchor) return
       const href = anchor.getAttribute('href')
-      if (!href || !href.startsWith('/') || href.startsWith('//')) return
+      if (!href) return
+
+      // 1. Internal root-relative links emitted by our renderer (e.g. /@alice, /trending/x)
+      if (href.startsWith('/') && !href.startsWith('//')) {
+        e.preventDefault()
+        navigate(href)
+        return
+      }
+
+      // 2. External Hive-frontend URLs — peakd, hive.blog, ecency, inleo, and
+      //    in-app hash hrefs (#/@alice[/permlink]). Route them to our own
+      //    detail page / profile instead of opening externally.
+      const target = parseHiveFrontendUrl(href)
+      if (!target) return
       e.preventDefault()
-      navigate(href)
+      if (target.kind === 'post') {
+        navigate(`/@${target.author}/${target.permlink}`)
+      } else if (target.kind === 'user') {
+        navigate(`/@${target.author}`)
+      }
     },
     [navigate]
   )
@@ -49,10 +68,11 @@ export function HtmlWith3Speak({ html, className = '' }: HtmlWith3SpeakProps) {
     const container = containerRef.current
     if (!container) return
 
-    const links = container.querySelectorAll<HTMLAnchorElement>('a[href*="3speak.tv"]')
     const roots: Array<{ root: ReturnType<typeof createRoot> }> = []
 
-    links.forEach((link) => {
+    // Replace 3Speak anchors with inline players.
+    const threeSpeakLinks = container.querySelectorAll<HTMLAnchorElement>('a[href*="3speak.tv"]')
+    threeSpeakLinks.forEach((link) => {
       const href = link.getAttribute('href')
       if (!href) return
       const parsed = parse3SpeakUrl(href)
@@ -63,9 +83,35 @@ export function HtmlWith3Speak({ html, className = '' }: HtmlWith3SpeakProps) {
       link.parentNode?.replaceChild(wrapper, link)
 
       const root = createRoot(wrapper)
-      root.render(
-        <ThreeSpeakPlayer author={parsed.author} permlink={parsed.permlink} />
-      )
+      root.render(<ThreeSpeakPlayer author={parsed.author} permlink={parsed.permlink} />)
+      roots.push({ root })
+    })
+
+    // Replace any YouTube reference — whether the Hive renderer emitted it as
+    // an anchor (`<a href="youtube…">`) OR auto-embedded it as an iframe
+    // (`<iframe src="https://www.youtube.com/embed/…">`) — with our inline
+    // thumbnail → youtube-nocookie iframe embed. On Android WebView, a bare
+    // youtube.com iframe/anchor triggers the native YouTube intent and yanks
+    // the user out of hsnaps; forcing our nocookie-based embed keeps
+    // playback inside the app.
+    const youtubeElements = container.querySelectorAll<HTMLElement>(
+      'a[href*="youtube.com"], a[href*="youtu.be"], iframe[src*="youtube.com"], iframe[src*="youtu.be"]'
+    )
+    youtubeElements.forEach((el) => {
+      const url =
+        el.tagName === 'A'
+          ? el.getAttribute('href')
+          : el.getAttribute('src')
+      if (!url) return
+      const videoId = parseYoutubeId(url)
+      if (!videoId) return
+
+      const wrapper = document.createElement('div')
+      wrapper.className = 'yt-inline-embed-wrapper'
+      el.parentNode?.replaceChild(wrapper, el)
+
+      const root = createRoot(wrapper)
+      root.render(<YoutubeInlineEmbed videoId={videoId} />)
       roots.push({ root })
     })
 

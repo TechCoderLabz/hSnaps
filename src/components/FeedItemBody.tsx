@@ -10,7 +10,6 @@ import type { NormalizedPost } from '../utils/types'
 import type { ParsedPostBody } from '../utils/postBody'
 import { parsePostBody, plainTextToSegments } from '../utils/postBody'
 import { openLink } from '../utils/openLink'
-import { isMobilePlatform } from '../utils/platform-detection'
 import { parseHiveFrontendUrl } from 'hive-react-kit'
 import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
@@ -534,13 +533,11 @@ function AttachmentStrip({
       const imgIndex = imageUrls.indexOf(a.url)
       setLightboxIndex(imgIndex >= 0 ? imgIndex : 0)
       setLightboxOpen(true)
-    } else if (a.kind === 'youtube' && isMobilePlatform()) {
-      // YouTube iframe embedding is flaky inside Capacitor WebView (referrer
-      // checks, embed-domain allowlists). Bypass the in-app popup and let
-      // the system handle it — iOS gets SFSafariViewController and Android
-      // hands off to Chrome / YouTube app, both of which play reliably.
-      void openLink(`https://www.youtube.com/watch?v=${a.id}`)
     } else {
+      // All other attachment kinds — including YouTube — open in the in-app
+      // MediaPopup. YouTube uses the nocookie embed domain which Capacitor
+      // WebView plays reliably, so we never hand off to the native YouTube
+      // app. (Previous mobile-only openLink() redirect removed.)
       setPopupAttachment(a)
     }
   }

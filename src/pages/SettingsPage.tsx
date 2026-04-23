@@ -261,7 +261,15 @@ export function SettingsPage() {
           <div className="mt-4 flex justify-center">
             <button
               type="button"
-              onClick={() => window.open(s.link, '_blank', 'noopener,noreferrer')}
+              onClick={() => {
+                // Internal hsnaps routes (e.g. /@alice) → navigate in-app.
+                // External links → open in a new tab.
+                if (s.link.startsWith('/') && !s.link.startsWith('//')) {
+                  navigate(s.link)
+                  return
+                }
+                window.open(s.link, '_blank', 'noopener,noreferrer')
+              }}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#e31337] px-4 py-2 text-white transition-colors hover:bg-[#c51231] sm:w-auto"
             >
               <span>{s.buttonText}</span>
