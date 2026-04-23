@@ -395,13 +395,18 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
 
   const pollData = useMemo(() => parsePollFromMetadata(post.json_metadata), [post.json_metadata])
 
-  const isHSnapsPost = useMemo(() => {
-    if (!post.json_metadata) return false
+  const parentTags = useMemo<string[]>(() => {
+    if (!post.json_metadata) return []
     try {
       const meta = JSON.parse(post.json_metadata) as { tags?: string[] }
-      return Array.isArray(meta.tags) && meta.tags.some((t) => String(t).toLowerCase() === 'hsnaps')
-    } catch { return false }
+      return Array.isArray(meta.tags) ? meta.tags.filter((t): t is string => typeof t === 'string') : []
+    } catch { return [] }
   }, [post.json_metadata])
+
+  const isHSnapsPost = useMemo(
+    () => parentTags.some((t) => t.toLowerCase() === 'hsnaps'),
+    [parentTags],
+  )
 
   const actionBtnClass =
     'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[#9ca3b0] transition-colors duration-200 hover:bg-[#2f353d] hover:text-[#f0f0f8]'
@@ -715,6 +720,8 @@ export function PostCard({ post, readOnly = false }: PostCardProps) {
           }}
           parentAuthor={post.author}
           parentPermlink={post.permlink}
+          alreadyVoted={hasUserUpvoted}
+          parentTags={parentTags}
         />
       )}
       {showEditModal && (

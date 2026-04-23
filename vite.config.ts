@@ -11,6 +11,14 @@ export default defineConfig({
     __DEPLOYMENT_BRANCH__: JSON.stringify(deployment?.branch ?? ''),
     __DEPLOYMENT_COMMIT_HASH__: JSON.stringify(deployment?.commitHash ?? ''),
   },
+  // Local hive-react-kit (file:../HiveReactKit): guarantee a single React copy
+  // and skip prebundling so fresh dist/ is picked up after each kit rebuild.
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    exclude: ['hive-react-kit'],
+  },
   server: {
     proxy: {
       // Avoid CORS: browser calls same origin, Vite forwards to PeakD

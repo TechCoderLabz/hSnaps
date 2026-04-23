@@ -12,10 +12,36 @@ import { toast } from 'sonner'
 import { useAuthData } from '../stores/authStore'
 import { useIgnoredAuthorsStore } from '../stores/ignoredAuthorsStore'
 import { useReportedPostsStore } from '../stores/reportedPostsStore'
-import { useHiveOperations } from '../hooks/useHiveOperations'
+import { useHiveOperations, stripAppSuffix } from '../hooks/useHiveOperations'
 import { isIOS, isMobilePlatform, getShareBaseUrl } from '../utils/platform-detection'
 
 const REPORT_API_URL = 'https://hreplier-api.sagarkothari88.one/report-post'
+
+/** Apps whose signature footer hsnaps/hreplier/hcurators share — first match in tags wins. */
+const APP_BADGE_PRIORITY = ['hsnaps', 'hreplier', 'hcurators'] as const
+
+/**
+ * Strip the shared "via Apps from" footer and, if it was present, emit a single
+ * app badge derived from the first priority tag found in the post's tag list.
+ */
+function processPostBody(body: string, tags: string[]): { body: string; badge?: React.ReactNode } {
+  const stripped = stripAppSuffix(body)
+  const hadSuffix = stripped.length !== body.trimEnd().length
+  if (!hadSuffix) return { body: stripped }
+
+  const lowerTags = tags.map((t) => t.toLowerCase())
+  const appTag = APP_BADGE_PRIORITY.find((t) => lowerTags.includes(t))
+  if (!appTag) return { body: stripped }
+
+  return {
+    body: stripped,
+    badge: (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#e31337]/15 px-2 py-0.5 text-[11px] font-medium text-[#f0f0f8]">
+        via #{appTag}
+      </span>
+    ),
+  }
+}
 
 /** Catches render errors so the whole app doesn't crash. */
 class PostErrorBoundary extends Component<
@@ -38,7 +64,7 @@ export function PostCommentsPage() {
   const navigate = useNavigate()
   const { aioha } = useAioha()
   const { isAuthenticated, username: currentUsername, ecencyToken, token } = useAuthData()
-  const { comment, vote } = useHiveOperations()
+  const { comment, vote, voteAndComment } = useHiveOperations()
   const haAuthStore = useAuthStore()
   const addIgnoredAuthor = useIgnoredAuthorsStore((s) => s.addAuthor)
   const ignoredAuthors = useIgnoredAuthorsStore((s) => s.list)
@@ -203,10 +229,17 @@ export function PostCommentsPage() {
             }
           }
         }}
-        onSubmitComment={async (parentAuthor, parentPermlink, body) => {
+        showVoteButton
+        processBody={processPostBody}
+        onSubmitComment={async (parentAuthor, parentPermlink, body, voteWeight) => {
           try {
-            await comment(parentAuthor, parentPermlink, body)
-            toast.success('Comment posted')
+            if (typeof voteWeight === 'number') {
+              await voteAndComment(parentAuthor, parentPermlink, voteWeight, body)
+              toast.success('Comment posted & upvoted')
+            } else {
+              await comment(parentAuthor, parentPermlink, body)
+              toast.success('Comment posted')
+            }
           } catch (e) {
             const msg = e instanceof Error ? e.message : 'Comment failed'
             if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {

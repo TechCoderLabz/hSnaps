@@ -17,6 +17,10 @@ interface ReplyComposerModalProps {
   placeholder?: string
   /** Feed type for composer (reply mode uses comment metadata regardless). */
   feedType?: FeedType
+  /** If true, hide the "upvote on publish" toggle — current user already voted the parent. */
+  alreadyVoted?: boolean
+  /** Parent post's tags. Merged into the composer's default tags after `hsnaps`. */
+  parentTags?: string[]
 }
 
 const DEFAULT_FEED_TYPE: FeedType = 'threads'
@@ -30,6 +34,8 @@ export function ReplyComposerModal({
   parentAvatarUrl,
   placeholder = 'Write your comment...',
   feedType = DEFAULT_FEED_TYPE,
+  alreadyVoted = false,
+  parentTags,
 }: ReplyComposerModalProps) {
   const [mounted, setMounted] = useState(false)
 
@@ -104,6 +110,8 @@ export function ReplyComposerModal({
             parentPermlink={parentPermlink}
             placeholder={placeholder}
             replyMode
+            alreadyVoted={alreadyVoted}
+            parentTags={parentTags}
             onSuccess={() => {
               onClose()
               onSuccess()

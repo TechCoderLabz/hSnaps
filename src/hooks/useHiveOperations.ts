@@ -361,7 +361,9 @@ export function useHiveOperations() {
       parentPermlink: string,
       weight: number,
       body: string,
-      title?: string
+      title?: string,
+      jsonMetadata?: string,
+      reward: RewardOption = 'default'
     ) => {
       if (!username) throw new Error("User not authenticated");
       if (!aioha) throw new Error("Wallet not available");
@@ -375,6 +377,12 @@ export function useHiveOperations() {
         const hiveWeight = convertPercentageToWeight(weight);
         const permlink = generateRandomPermlink(8);
         const commentTitle = title || `Re: ${parentAuthor}'s post`;
+        const metadata = jsonMetadata ?? JSON.stringify({
+          app: 'peakd/2026.3.1',
+          developer: DEVELOPER_ACCOUNT,
+          tags: ['hsnaps'],
+          format: 'markdown',
+        });
         const finalBody = withSuffix(body);
         const operations: any[] = [
           [
@@ -395,15 +403,14 @@ export function useHiveOperations() {
               permlink,
               title: commentTitle,
               body: finalBody,
-              json_metadata: JSON.stringify({
-                tags: ["hivepolls"],
-                app: "hivepolls/1.0.0",
-                format: "markdown",
-              }),
+              json_metadata: metadata,
             },
           ],
         ];
-        if (hasMediaContent(body)) {
+        const rewardOp = buildRewardCommentOptions(username!, permlink, reward);
+        if (rewardOp) {
+          operations.push(rewardOp);
+        } else if (hasMediaContent(body)) {
           operations.push(buildCommentOptions(username!, permlink));
         }
         const result = await aioha.signAndBroadcastTx(operations, KeyTypes.Posting);

@@ -26,6 +26,10 @@ interface FeedComposerProps {
   authorMention?: string
   /** When true, use comment metadata (no tags, hsnaps app) and 2000 char limit. */
   replyMode?: boolean
+  /** If true, the current user has already upvoted the parent — hides the upvote-on-publish toggle. */
+  alreadyVoted?: boolean
+  /** Parent post's tags. In reply mode these are merged after `hsnaps` (first) into default tags. */
+  parentTags?: string[]
 }
 
 /** Extract image URLs from markdown ![](url) or ![alt](url) */
@@ -40,16 +44,29 @@ function extractImageUrlsFromMarkdown(md: string): string[] {
 const DEVELOPER = 'sagarkothari88'
 const APP_TAG = 'hsnaps'
 
+/** Normalize, dedupe (case-insensitive, preserve order), and cap the tag list. */
+function normalizeTags(tags: string[], cap = 10): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of tags) {
+    const t = String(raw).trim().toLowerCase().replace(/^#+/, '').replace(/\s+/g, '-')
+    if (!t || seen.has(t)) continue
+    seen.add(t)
+    out.push(t)
+    if (out.length >= cap) break
+  }
+  return out
+}
+
 /**
  * Locked default tags per feed type — shown in the composer's tag manager.
  *
  * - `hsnaps` is always the first tag (app identifier).
  * - New posts include the feed-specific tags after the app tag.
- * - Replies keep the list minimal (just `hsnaps`) — no per-feed tags or inheritance
- *   from the parent post, since the reply lives inside the parent's tagged container.
+ * - Replies use `hsnaps` first, then inherit the parent post's tags (deduped, capped at 10).
  */
-function getDefaultTagsForFeed(feedType: FeedType, replyMode: boolean): string[] {
-  if (replyMode) return [APP_TAG]
+function getDefaultTagsForFeed(feedType: FeedType, replyMode: boolean, parentTags?: string[]): string[] {
+  if (replyMode) return normalizeTags([APP_TAG, ...(parentTags ?? [])])
   const now = new Date()
   const wavesTag = `waves-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
   switch (feedType) {
@@ -144,10 +161,12 @@ export function FeedComposer({
   onSuccess,
   placeholder = 'Write in Markdown...',
   replyMode = false,
+  alreadyVoted = false,
+  parentTags,
 }: FeedComposerProps) {
   const { isAuthenticated, username, ecencyToken, token } = useAuthData()
   const { aioha } = useAioha()
-  const { comment } = useHiveOperations()
+  const { comment, voteAndComment } = useHiveOperations()
   const { currentUser: hiveAuthUser } = useHiveAuthStore()
   const signMessage = useHiveImageSign({ signer: aioha, user: hiveAuthUser })
   const [body, setBody] = useState('')
@@ -155,6 +174,8 @@ export function FeedComposer({
   const [pollData, setPollData] = useState<PollData | null>(null)
   const [tags, setTags] = useState<string[]>([])
   const [reward, setReward] = useState<RewardOption>('default')
+  const [voteEnabled, setVoteEnabled] = useState(false)
+  const [votePercent, setVotePercent] = useState(100)
   const provider = (hiveAuthUser?.provider || '').toLowerCase()
   const isWalletProvider = provider === 'keychain' || provider === 'peakvault' || provider === 'hiveauth'
   const awaitingWalletApproval = isSubmitting && isWalletProvider
@@ -167,8 +188,8 @@ export function FeedComposer({
   const composeSingleFeedMode = Boolean(containerRefs && selectedFeed)
   const effectiveFeed = composeSingleFeedMode ? selectedFeed! : feedType
   const defaultTagsForFeed = useMemo(
-    () => getDefaultTagsForFeed(effectiveFeed, replyMode),
-    [effectiveFeed, replyMode],
+    () => getDefaultTagsForFeed(effectiveFeed, replyMode, parentTags),
+    [effectiveFeed, replyMode, parentTags?.join('|')],
   )
   const limit = replyMode ? REPLY_CHAR_LIMIT : FEED_CHAR_LIMITS[effectiveFeed]
   const containerRef = composeSingleFeedMode ? containerRefs?.[effectiveFeed] : null
@@ -198,10 +219,14 @@ export function FeedComposer({
       const effectiveTags = tags.length > 0 ? tags : defaultTagsForFeed
       const jsonMetadata = buildJsonMetadataForFeed(effectiveFeed, finalBody, effectiveTags, audioInfo, videoInfo, pollData)
 
-      if (composeSingleFeedMode && containerRef) {
-        await comment(containerRef.author, containerRef.permlink, finalBody, '', jsonMetadata, reward)
+      const [targetAuthor, targetPermlink] = composeSingleFeedMode && containerRef
+        ? [containerRef.author, containerRef.permlink]
+        : [parentAuthor!, parentPermlink!]
+
+      if (voteEnabled) {
+        await voteAndComment(targetAuthor, targetPermlink, votePercent, finalBody, '', jsonMetadata, reward)
       } else {
-        await comment(parentAuthor!, parentPermlink!, finalBody, '', jsonMetadata, reward)
+        await comment(targetAuthor, targetPermlink, finalBody, '', jsonMetadata, reward)
       }
       toast.success('Posted successfully!')
       setBody('')
@@ -260,6 +285,13 @@ export function FeedComposer({
         onTagsChange={setTags}
         defaultReward={reward}
         onRewardChange={setReward}
+        showVoteButton={replyMode && !alreadyVoted}
+        defaultVoteEnabled={false}
+        defaultVotePercent={100}
+        onVoteChange={(enabled, percent) => {
+          setVoteEnabled(enabled)
+          setVotePercent(percent)
+        }}
       />
     </div>
   )
