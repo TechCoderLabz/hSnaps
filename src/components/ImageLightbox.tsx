@@ -3,7 +3,7 @@
  * Uses original image URLs (no proxy). Border and rounded corners; arrows only when >1 image.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ImageOff, Loader2 } from 'lucide-react'
 import { proxyImageUrl } from '../utils/imageProxy'
 
 const SWIPE_THRESHOLD_PX = 50
@@ -17,6 +17,8 @@ export interface ImageLightboxProps {
 export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex)
   const [imageLoading, setImageLoading] = useState(true)
+  const [imageErrored, setImageErrored] = useState(false)
+  const [useFallback, setUseFallback] = useState(false)
   const touchStartX = useRef<number | null>(null)
   const touchSwipeHandled = useRef(false)
   const dragStartX = useRef<number | null>(null)
@@ -90,15 +92,20 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
 
   const proxiedUrls = useMemo(() => imageUrls.map((u) => proxyImageUrl(u)), [imageUrls])
 
-  if (proxiedUrls.length === 0) return null
-
-  const current = proxiedUrls[index]!
-  const total = imageUrls.length
-  const showArrows = total > 1
+  const current = proxiedUrls[index]
+  const rawCurrent = imageUrls[index]
+  const displayUrl = useFallback && rawCurrent ? rawCurrent : current
 
   useEffect(() => {
     setImageLoading(true)
+    setImageErrored(false)
+    setUseFallback(false)
   }, [current])
+
+  if (proxiedUrls.length === 0 || !current) return null
+
+  const total = imageUrls.length
+  const showArrows = total > 1
 
   return (
     <div
@@ -155,24 +162,37 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
             if (e.target === e.currentTarget) onClose()
           }}
         >
-          {imageLoading && (
+          {imageLoading && !imageErrored && (
             <div className="absolute inset-0 z-[5] flex items-center justify-center bg-[#1a1e22]">
               <Loader2 className="h-12 w-12 animate-spin text-[#e31337]" aria-hidden />
             </div>
           )}
-          <img
-            src={current}
-            alt={`Image ${index + 1} of ${total}`}
-            className="max-h-full max-w-full select-none object-contain"
-            draggable={false}
-            onClick={(e) => e.stopPropagation()}
-            onLoad={() => setImageLoading(false)}
-            onError={(e) => {
-              const t = e.target as HTMLImageElement
-              t.style.display = 'none'
-              setImageLoading(false)
-            }}
-          />
+          {imageErrored ? (
+            <div className="flex flex-col items-center gap-3 px-6 text-center text-[#9ca3b0]">
+              <ImageOff className="h-12 w-12" />
+              <span className="text-sm">Image unavailable</span>
+            </div>
+          ) : (
+            <img
+              src={displayUrl}
+              alt={`Image ${index + 1} of ${total}`}
+              className="max-h-full max-w-full select-none object-contain"
+              draggable={false}
+              onClick={(e) => e.stopPropagation()}
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                // Fallback chain: proxied URL -> raw URL -> error placeholder.
+                // Hive's image proxy frequently 4xx's at 0x0 (full-size) for
+                // files.peakd.com images that load fine when fetched directly.
+                if (!useFallback && rawCurrent && rawCurrent !== current) {
+                  setUseFallback(true)
+                } else {
+                  setImageErrored(true)
+                  setImageLoading(false)
+                }
+              }}
+            />
+          )}
           {showArrows && (
             <>
               <button
