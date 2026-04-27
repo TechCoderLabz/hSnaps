@@ -33,7 +33,7 @@ function App() {
         <EulaGate>
           <HashRouter>
             <AppRoutes />
-            <Toaster position="bottom-center" richColors closeButton />
+            <Toaster position="bottom-center" richColors closeButton duration={3500} />
           </HashRouter>
         </EulaGate>
       </AuthProvider>

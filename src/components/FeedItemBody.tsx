@@ -17,6 +17,7 @@ import { HtmlWith3Speak } from './HtmlWith3Speak'
 import { useMarkdownRenderer } from '../hooks/useMarkdownRenderer'
 import { getHiveProxyThumbnailUrl, proxyImageUrl } from '../utils/imageProxy'
 import { useVideoPlaybackStore } from '../stores/videoPlaybackStore'
+import { useBackDismiss } from '../stores/backDismissStore'
 
 /* ------------------------------------------------------------------ */
 /*  Shared text helpers                                               */
@@ -263,6 +264,8 @@ function MediaPopup({ attachment, onClose }: { attachment: Attachment; onClose: 
     else if (attachment.kind === '3speak') setCurrentId(`3speak:${attachment.author}/${attachment.permlink}`)
     return () => setCurrentId(null)
   }, [attachment, setCurrentId])
+
+  useBackDismiss(true, onClose)
 
   // Mobile: fullscreen. Tablet/desktop: fit content, center it.
   const isCompact = attachment.kind === 'audio' || attachment.kind === '3speak-audio'

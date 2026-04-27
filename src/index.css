@@ -274,3 +274,15 @@ body {
   width: 100% !important;
   color-scheme: dark;
 }
+
+/* Sonner: on touch devices `mouseleave` doesn't fire reliably, leaving the
+   toast in a paused/expanded state forever after a tap. Make the toast body
+   inert to pointer events so taps don't trigger the pause; keep the close
+   button interactive so it can still dismiss. */
+[data-sonner-toaster] [data-sonner-toast] {
+  pointer-events: none !important;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-close-button],
+[data-sonner-toaster] [data-sonner-toast] [data-button] {
+  pointer-events: auto !important;
+}

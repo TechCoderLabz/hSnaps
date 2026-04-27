@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, ImageOff, Loader2 } from 'lucide-react'
 import { proxyImageUrl } from '../utils/imageProxy'
+import { useBackDismiss } from '../stores/backDismissStore'
 
 const SWIPE_THRESHOLD_PX = 50
 
@@ -40,6 +41,8 @@ export function ImageLightbox({ imageUrls, initialIndex, onClose }: ImageLightbo
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose, goPrev, goNext])
+
+  useBackDismiss(true, onClose)
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.targetTouches[0]?.clientX ?? null
