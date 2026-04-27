@@ -4,7 +4,7 @@
  */
 import { Component, type ErrorInfo, type ReactNode, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { KeyTypes } from '@aioha/aioha'
 import { UserDetailProfile } from 'hive-react-kit'
 import { toast } from 'sonner'

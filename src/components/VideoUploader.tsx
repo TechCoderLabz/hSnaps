@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Video, X, Loader2, Play, Trash2 } from 'lucide-react'
 import { Upload as TusUpload } from 'tus-js-client'
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import type { Aioha } from '@aioha/aioha'
 import { useAuthData } from '../stores/authStore'
 import { uploadToHiveImages } from '../services/hiveImageUpload'

@@ -1,6 +1,6 @@
 import { HashRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
-import { AiohaProvider } from '@aioha/react-provider'
+import { AiohaProvider } from "@aioha/react-ui";
 import { initAioha } from '@aioha/aioha'
 import { AppRoutes } from './app/AppRoutes'
 import { AuthProvider } from './context/AuthContext'

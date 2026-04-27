@@ -7,7 +7,7 @@
  * - Respects ui_hide_res_until_voted
  * - Green progress bars for results with % on each choice
  */
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { KeyTypes } from '@aioha/aioha'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'

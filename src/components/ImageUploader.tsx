@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { useAuthData } from '../stores/authStore'
 import { uploadToHiveImages } from '../services/hiveImageUpload'
 

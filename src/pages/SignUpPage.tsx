@@ -23,7 +23,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { useProgrammaticAuth } from 'hive-authentication'
 import type { HiveAuthResult } from 'hive-authentication'
 import { checkUsername, createAccount } from '../services/accountService'

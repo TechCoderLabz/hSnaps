@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { PostComposer, useHiveImageSign } from 'hive-react-kit'
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { useAuthStore as useHiveAuthStore } from 'hive-authentication'
 import { useAuthData } from '../stores/authStore'
 import { useHiveOperations, stripAppSuffix } from '../hooks/useHiveOperations'

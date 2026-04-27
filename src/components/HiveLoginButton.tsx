@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import 'hive-authentication/build.css'
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { AuthButton } from 'hive-authentication'
 import type { HiveAuthResult } from 'hive-authentication'
 import { useAppAuthStore } from '../stores/authStore'

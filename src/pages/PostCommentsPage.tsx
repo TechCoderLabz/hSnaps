@@ -4,7 +4,7 @@
  */
 import { Component, type ErrorInfo, type ReactNode, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { KeyTypes } from '@aioha/aioha'
 import { HiveDetailPost } from 'hive-react-kit'
 import { ReportModal, useAuthStore } from 'hive-authentication'

@@ -2,7 +2,7 @@
  * Feed post card: avatar, username, date, rendered body, and custom chain action row.
  * Uses Aioha operations for upvote/reblog/tip and hive-react-kit for upvote list modal.
  */
-import { useAioha } from '@aioha/react-provider'
+import { useAioha } from '@aioha/react-ui'
 import { KeyTypes } from '@aioha/aioha'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
