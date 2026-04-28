@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bookmark, Loader2, AlertCircle, Trash2 } from 'lucide-react'
+import { TranslatedText } from 'hive-react-kit'
 import { useAuthData } from '../stores/authStore'
 import { getBookmarks, removeBookmark, type BookmarkItem } from '../services/bookmarkService'
 import { toast } from 'sonner'
@@ -124,7 +125,9 @@ export function BookmarksPage() {
             >
               <p className="text-sm font-medium text-[#ff8fa3]">@{b.author}</p>
               <p className="mt-1 line-clamp-2 text-sm text-[#e7e7f1]">
-                {b.title || b.body || `${b.author}/${b.permlink}`}
+                <TranslatedText
+                  text={b.title || b.body || `${b.author}/${b.permlink}`}
+                />
               </p>
             </Link>
             <button

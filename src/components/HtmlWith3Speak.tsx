@@ -2,11 +2,11 @@
  * Renders HTML and replaces any a[href*="3speak.tv"] with the native 3Speak player.
  * Use wherever user content (markdown-rendered HTML) is displayed.
  */
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
-import { parseHiveFrontendUrl } from 'hive-react-kit'
+import { parseHiveFrontendUrl, useTranslatedHtml } from 'hive-react-kit'
 import { parse3SpeakUrl, htmlEnsure3speakLinks } from '../utils/3speak'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
 import { YoutubeInlineEmbed, parseYoutubeId } from './YoutubeInlineEmbed'
@@ -26,12 +26,23 @@ export function HtmlWith3Speak({ html, className = '' }: HtmlWith3SpeakProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mountedRootsRef = useRef<Array<{ root: ReturnType<typeof createRoot> }>>([])
   const navigate = useNavigate()
-  const htmlWithLinks = DOMPurify.sanitize(htmlEnsure3speakLinks(html), {
-    ADD_TAGS: ['iframe'],
-    ADD_ATTR: ['target', 'allowfullscreen', 'frameborder', 'scrolling', 'allow', 'loading'],
-    FORBID_TAGS: ['script', 'style', 'svg', 'math'],
-    ALLOW_DATA_ATTR: false,
-  })
+  const htmlWithLinks = useMemo(
+    () =>
+      DOMPurify.sanitize(htmlEnsure3speakLinks(html), {
+        ADD_TAGS: ['iframe'],
+        ADD_ATTR: ['target', 'allowfullscreen', 'frameborder', 'scrolling', 'allow', 'loading'],
+        FORBID_TAGS: ['script', 'style', 'svg', 'math'],
+        ALLOW_DATA_ATTR: false,
+      }),
+    [html],
+  )
+
+  // Translate visible text nodes per the language set on
+  // <HiveLanguageProvider>. Returns the original HTML synchronously while the
+  // request is in flight, so feed scrolling never blocks. The 3Speak / YouTube
+  // post-processing effect below runs against `htmlToRender` so DOM surgery
+  // re-applies after the translated HTML is mounted.
+  const { html: htmlToRender } = useTranslatedHtml(htmlWithLinks)
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -121,14 +132,14 @@ export function HtmlWith3Speak({ html, className = '' }: HtmlWith3SpeakProps) {
       roots.forEach(({ root }) => root.unmount())
       mountedRootsRef.current = []
     }
-  }, [htmlWithLinks])
+  }, [htmlToRender])
 
   return (
     <div
       ref={containerRef}
       onClick={handleClick}
       // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: htmlWithLinks }}
+      dangerouslySetInnerHTML={{ __html: htmlToRender }}
       className={className}
     />
   )

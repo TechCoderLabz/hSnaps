@@ -10,7 +10,7 @@ import type { NormalizedPost } from '../utils/types'
 import type { ParsedPostBody } from '../utils/postBody'
 import { parsePostBody, plainTextToSegments } from '../utils/postBody'
 import { openLink } from '../utils/openLink'
-import { parseHiveFrontendUrl } from 'hive-react-kit'
+import { parseHiveFrontendUrl, TranslatedText } from 'hive-react-kit'
 import { ImageLightbox } from './ImageLightbox'
 import { ThreeSpeakPlayer } from './ThreeSpeakPlayer'
 import { HtmlWith3Speak } from './HtmlWith3Speak'
@@ -677,7 +677,17 @@ export function ParsedBodyContent({
             {plainTextToSegments(parsed.plainText).map((seg, i) =>
               seg.type === 'text' ? (
                 <span key={i}>
-                  {highlightQuery ? highlightText(seg.value, highlightQuery) : seg.value}
+                  {highlightQuery
+                    ? highlightText(seg.value, highlightQuery)
+                    /*
+                     * Snaps are mostly plain text and skip the markdown +
+                     * HtmlWith3Speak path that already translates via
+                     * useTranslatedHtml. Wrap each prose segment in
+                     * TranslatedText so it follows the HiveLanguageProvider
+                     * language. Hashtags / mentions / links stay untouched
+                     * (they're identifiers, not prose).
+                     */
+                    : <TranslatedText text={seg.value} />}
                 </span>
               ) : seg.type === 'link' ? (
                 <LinkSegment key={i} url={seg.url} />
